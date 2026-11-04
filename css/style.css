@@ -314,6 +314,7 @@ kbd {
 .sumtable td:last-child { text-align: right; font-family: var(--num); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sumtable tr.total td { font-weight: 750; border-top: 2px solid var(--ink); }
 
+.revolut-btn { display: flex; width: 100%; margin-top: 10px; text-decoration: none; }
 .deposits { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .deposit {
   border-radius: var(--radius-sm); padding: 12px; background: var(--surface-2);

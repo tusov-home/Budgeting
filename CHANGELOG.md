@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-04 a
+- Month → Transfers to the wallet: **Open Revolut · copy 1.177,01 €** (phone only, for your own deposit while it's still to transfer). It copies your amount, ready to paste, and opens the Revolut app. When you come back to the Budget app, it asks "Transferred …?" and one tap marks it as done.
+- Revolut has no public link that opens a transfer to a joint account or pocket with the amount filled in, so pasting the copied amount is the shortest way.
+
 ## 2026-11-01 a
 - **Close down last month's wallet.** When a new month starts, the Wallet and Month screens remind you until last month is closed down. On last month's Wallet, each of you presses **Close down**: the first enters the Revolut balance at the end of the month, and each confirms that all their purchases from that month are sorted (if this phone still has unsorted purchases from that month, it sends you to Purchases first).
 - The month closes when both have closed down with the same numbers. Changing the final balance, or sorting another common purchase into that month, asks the other one to confirm again.

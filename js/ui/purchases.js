@@ -5,7 +5,7 @@ import * as state from '../state.js';
 import * as purchases from '../purchases.js';
 import { formatCents } from '../lib/money.js';
 import { dateKeyOf, shortDateLabel, monthLabel, daysInMonth } from '../lib/months.js';
-import { esc, toast } from './dom.js';
+import { esc, toast, REVOLUT_APP, isAndroid } from './dom.js';
 import { openForm } from './form.js';
 
 // The month chosen at the top (and how to change it), for imports started from this screen.
@@ -192,11 +192,6 @@ function expenseRow(e) {
   </button></li>`;
 }
 
-// Opens the Revolut app on Android: Revolut's app catches this web address
-// (tested on our phone; its start screen can't be opened with an "intent:" link).
-// Without the app installed it simply opens Revolut's website.
-const REVOLUT_APP = 'https://www.revolut.com/app/';
-const isAndroid = () => /Android/i.test(navigator.userAgent);
 
 /**
  * "Import CSV": on the phone, offer to get a fresh statement from Revolut (which then

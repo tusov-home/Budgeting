@@ -4,7 +4,7 @@
 import * as state from '../state.js';
 import { formatCents, parseCents, centsToInput } from '../lib/money.js';
 import { monthLabel } from '../lib/months.js';
-import { esc, payerBadge, payerOptions, toast } from './dom.js';
+import { esc, payerBadge, payerOptions, toast, REVOLUT_APP, isAndroid } from './dom.js';
 import { openForm } from './form.js';
 import * as closedown from './closedown.js';
 
@@ -120,6 +120,7 @@ export function render(main, ctx) {
 
 /** Things that stay possible after locking: ticking costs as paid, marking transfers. */
 function bindTracking(main, month) {
+  bindRevolut(main, month);
   // Tapping a deposit box toggles "to transfer" ↔ "transferred".
   main.querySelectorAll('[data-transfer]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -242,6 +243,7 @@ function resultCard(s, plan, done) {
       ${depositBox('t', s, plan, done.t)}
       ${depositBox('k', s, plan, done.k)}
     </div>
+    ${revolutButton(s, plan, done)}
     <p class="muted small" style="margin:10px 0 0">Tap a box when the transfer is done in Revolut.
       Deposit = salary − own-account costs − private half.</p>
     ${warn}
@@ -250,6 +252,51 @@ function resultCard(s, plan, done) {
       <span class="num" data-testid="private">${formatCents(plan.privateMoney.t)}</span>
     </div>
   </section>`;
+}
+
+/**
+ * "Open Revolut": for this phone's owner, while their deposit is still to transfer.
+ * Copies the amount (to paste in Revolut's transfer screen) and opens the app.
+ */
+function revolutButton(s, plan, done) {
+  const me = state.getDevice().me;
+  const amount = plan.deposit[me];
+  if (!isAndroid() || amount <= 0 || done[me]) return '';
+  return `<a class="btn primary revolut-btn" href="${REVOLUT_APP}" data-act="revolut-transfer" data-amount="${amount}"
+      data-testid="revolut-transfer">Open Revolut · copy ${formatCents(amount)}</a>
+    <p class="muted small" style="margin:6px 0 0">In Revolut: transfer to the shared wallet and paste the amount.
+      When you come back, the app asks whether it's done.</p>`;
+}
+
+/** Amount as typed in Revolut: no thousands dots, comma for cents (1234,56). */
+const pasteAmount = (cents) => centsToInput(cents).replace(/\./g, '');
+
+/**
+ * After "Open Revolut": copy the amount, and when the app is shown again,
+ * offer to mark the transfer as done (one tap instead of finding the box).
+ */
+function bindRevolut(main, month) {
+  const link = main.querySelector('[data-act="revolut-transfer"]');
+  if (!link) return;
+  link.addEventListener('click', () => {
+    const cents = Number(link.dataset.amount);
+    navigator.clipboard?.writeText(pasteAmount(cents)).catch(() => {});
+    const me = state.getDevice().me;
+    const onBack = () => {
+      if (document.visibilityState !== 'visible') return;
+      document.removeEventListener('visibilitychange', onBack);
+      if (state.getTransfersDone(month)[me]) return;
+      toast(`Transferred ${formatCents(cents)} to the wallet?`, {
+        label: 'Yes, mark done',
+        run: () => {
+          state.setTransferDone(month, me, true);
+          toast('Marked as transferred', { label: 'Undo', run: state.undo });
+        },
+      }, 'sticky');
+    };
+    // Wait until we have actually left for Revolut before listening for the way back.
+    setTimeout(() => document.addEventListener('visibilitychange', onBack), 500);
+  });
 }
 
 function depositBox(p, s, plan, isDone) {

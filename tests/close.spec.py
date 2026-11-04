@@ -78,7 +78,9 @@ def run(p):
 
     # Kristiina imports October purchases but doesn't sort them yet
     kris.locator('.tabs [data-view="buys"]').click()
+    expect(kris.get_by_test_id("sort-count")).to_be_visible(timeout=5000)
     kris.set_input_files("#csv-file", str(FIX / "revolut-week1.csv"))
+    expect(kris.locator(".sort-row").first).to_be_visible(timeout=5000)
     kris.keyboard.press("Escape")
     waiting = int(kris.get_by_test_id("sort-count").inner_text())
     check(f"Kristiina has October purchases waiting to sort ({waiting})", waiting > 0)
@@ -98,6 +100,7 @@ def run(p):
     check("November Month screen shows the reminder too", tonis.get_by_test_id("close-reminder").count() == 1)
     tonis.screenshot(path=str(SHOTS / "close-phone-reminder-month.png"), full_page=True)
     tonis.get_by_test_id("close-reminder").click()
+    expect(tonis.get_by_test_id("close-card")).to_be_visible(timeout=5000)
     check("the reminder opens October's Wallet", tonis.locator("#month-title").inner_text() == "October 2026"
           and tonis.get_by_test_id("close-card").count() == 1)
     tonis.screenshot(path=str(SHOTS / "close-phone-card.png"), full_page=True)

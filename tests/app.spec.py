@@ -161,6 +161,29 @@ def run(p):
     check("Kristiina gets 247,01 € back", "247,01" in dep_k and "back from the wallet" in dep_k)
 
     check("deposit starts as 'To transfer'", page.get_by_test_id("status-t").inner_text() == "To transfer")
+
+    # "Open Revolut · copy": copies this phone's amount, opens Revolut, asks on the way back
+    rv = page.get_by_test_id("revolut-transfer")
+    check("Open Revolut button shows Tõnis's amount", rv.count() == 1 and "1.177,01" in rv.inner_text())
+    check("it opens the Revolut app link", rv.get_attribute("href") == "https://www.revolut.com/app/")
+    page.screenshot(path=str(SHOTS / "phone-transfer-revolut.png"), full_page=True)
+    page.context.grant_permissions(["clipboard-read", "clipboard-write"])
+    # Stay on the page in the test (on the phone, the Revolut app catches the link).
+    page.evaluate("document.querySelector('[data-act=revolut-transfer]').addEventListener('click', e => e.preventDefault())")
+    rv.click()
+    page.wait_for_timeout(700)
+    check("the amount is copied, ready to paste (1177,01)", page.evaluate("navigator.clipboard.readText()") == "1177,01")
+    page.evaluate("""() => {
+        const set = (v) => { Object.defineProperty(document, 'visibilityState', { value: v, configurable: true });
+                             document.dispatchEvent(new Event('visibilitychange')); };
+        set('hidden'); set('visible');
+    }""")
+    check("coming back asks whether the transfer is done", "Transferred 1.177,01" in page.locator("#toast").inner_text())
+    page.locator("#toast").get_by_role("button", name="Yes, mark done").click()
+    check("one tap marks it transferred", "Transferred" in page.get_by_test_id("status-t").inner_text())
+    check("…and the Revolut button goes away", page.get_by_test_id("revolut-transfer").count() == 0)
+    page.get_by_test_id("deposit-t").click()
+    check("no Revolut button for money coming back (Kristiina's box)", "revolut" not in page.locator(".deposit.k").inner_html().lower())
     page.get_by_test_id("deposit-t").click()
     check("tapping Tõnis's deposit marks it transferred", "Transferred" in page.get_by_test_id("status-t").inner_text())
     check("Kristiina's (money back) shows 'To receive'", page.get_by_test_id("status-k").inner_text() == "To receive")

@@ -12,6 +12,14 @@ export function esc(value) {
     .replace(/'/g, '&#39;');
 }
 
+// Opens the Revolut app on Android: Revolut's app catches this web address
+// (tested on our phone; its start screen can't be opened with an "intent:" link).
+// Without the app installed it simply opens Revolut's website.
+// Revolut has no public link that opens a transfer to a joint account or pocket
+// with the amount filled in, so the app copies the amount instead.
+export const REVOLUT_APP = 'https://www.revolut.com/app/';
+export const isAndroid = () => /Android/i.test(navigator.userAgent);
+
 /** Coloured initials badge for a payer: 't', 'k' or 'wallet'. */
 export function payerBadge(payer) {
   const s = getSettings();
