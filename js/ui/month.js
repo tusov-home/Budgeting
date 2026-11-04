@@ -268,8 +268,8 @@ function revolutButton(s, plan, done) {
       When you come back, the app asks whether it's done.</p>`;
 }
 
-/** Amount as typed in Revolut: no thousands dots, comma for cents (1234,56). */
-const pasteAmount = (cents) => centsToInput(cents).replace(/\./g, '');
+/** Amount as Revolut accepts it when pasted: no thousands separator, dot for cents (1234.56). */
+const pasteAmount = (cents) => (cents / 100).toFixed(2);
 
 /**
  * After "Open Revolut": copy the amount, and when the app is shown again,

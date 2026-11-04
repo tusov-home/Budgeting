@@ -172,7 +172,7 @@ def run(p):
     page.evaluate("document.querySelector('[data-act=revolut-transfer]').addEventListener('click', e => e.preventDefault())")
     rv.click()
     page.wait_for_timeout(700)
-    check("the amount is copied, ready to paste (1177,01)", page.evaluate("navigator.clipboard.readText()") == "1177,01")
+    check("the amount is copied with a dot, as Revolut wants it (1177.01)", page.evaluate("navigator.clipboard.readText()") == "1177.01")
     page.evaluate("""() => {
         const set = (v) => { Object.defineProperty(document, 'visibilityState', { value: v, configurable: true });
                              document.dispatchEvent(new Event('visibilitychange')); };

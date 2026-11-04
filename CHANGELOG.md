@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-04 b
+- Open Revolut copies the amount with a dot (1177.01): Revolut didn't accept the comma.
+
 ## 2026-11-04 a
 - Month → Transfers to the wallet: **Open Revolut · copy 1.177,01 €** (phone only, for your own deposit while it's still to transfer). It copies your amount, ready to paste, and opens the Revolut app. When you come back to the Budget app, it asks "Transferred …?" and one tap marks it as done.
 - Revolut has no public link that opens a transfer to a joint account or pocket with the amount filled in, so pasting the copied amount is the shortest way.
