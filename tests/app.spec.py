@@ -261,8 +261,14 @@ def run(p):
     page.screenshot(path=str(SHOTS / "phone-checkin-ask-sorted.png"))
     sort_btn.click()
     expect(page).to_have_url(re.compile("#buys$"), timeout=2000)
-    check("check-in: 'Sort transactions' goes to Purchases without a check-in", not page.locator("#form-dialog[open]").count())
+    expect(page.locator("#form-dialog[open] h2")).to_have_text("Import Revolut statement", timeout=2000)
+    check("check-in: 'Sort transactions' goes to Purchases and opens the Import CSV menu",
+          page.locator("#form-dialog[open]").get_by_role("link", name="Open Revolut").count() == 1)
+    page.screenshot(path=str(SHOTS / "phone-sort-opens-import.png"))
+    page.keyboard.press("Escape")
     page.locator('.tabs [data-view="wallet"]').click()
+    expect(page.get_by_test_id("balance-line")).to_contain_text("Check in with the Revolut balance", timeout=2000)
+    check("…and no check-in was made", True)
     page.get_by_role("button", name=re.compile("Check in")).click()
     page.get_by_role("button", name="Yes, enter balance").click()
     page.locator('#form-dialog [name="balance"]').fill("59,61")
@@ -478,6 +484,11 @@ def run(p):
     page.get_by_role("button", name="Start empty").click()
     page.fill("#wallet-budget", "600")
     page.locator("body").click(position={"x": 5, "y": 400})
+    page.keyboard.press("2")
+    page.keyboard.press("c")
+    with page.expect_file_chooser(timeout=3000) as chooser:
+        page.keyboard.press("Enter")  # the focused green "Sort transactions"
+    check("laptop: Sort transactions opens the file picker on Purchases", chooser.value is not None and "#buys" in page.url)
     page.keyboard.press("2")
     page.keyboard.press("c")
     check("C first asks whether purchases are sorted", page.locator("#form-dialog[open] h2").inner_text() == "Are the latest purchases sorted?")

@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-04 d
+- Check in balance → **Sort transactions** now goes to Purchases and opens the same menu as **Import CSV** (on the phone: Open Revolut or Choose file; on a computer: the file picker).
+
 ## 2026-11-04 c
 - Check in balance → "Are the latest purchases sorted?": the main (green) button is now **Sort transactions** (was "No, sort them first"); "Yes, enter balance" is a plain button.
 

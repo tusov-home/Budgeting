@@ -12,6 +12,7 @@ import { sortStatus, daysAgoLabel, toSort } from '../purchases.js';
 import { esc, toast, payerOptions } from './dom.js';
 import { openForm } from './form.js';
 import * as closedown from './closedown.js';
+import { openImport } from './purchases.js';
 
 export function render(main, ctx) {
   const { month, todayKey } = ctx;
@@ -247,7 +248,12 @@ async function askSorted() {
     dlg.close();
   });
   const answer = await asked;
-  if (sortFirst) location.hash = 'buys';
+  if (sortFirst) {
+    // Go to Purchases and open the same menu as its "Import CSV" button,
+    // once that screen is drawn (the file picker lives on it).
+    window.addEventListener('hashchange', () => setTimeout(openImport, 0), { once: true });
+    location.hash = 'buys';
+  }
   return answer !== null;
 }
 
