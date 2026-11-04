@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-04 c
+- Check in balance → "Are the latest purchases sorted?": the main (green) button is now **Sort transactions** (was "No, sort them first"); "Yes, enter balance" is a plain button.
+
 ## 2026-11-04 b
 - Open Revolut copies the amount with a dot (1177.01): Revolut didn't accept the comma.
 

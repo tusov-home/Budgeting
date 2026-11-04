@@ -234,13 +234,14 @@ async function askSorted() {
     title: 'Are the latest purchases sorted?',
     fields: [],
     submitLabel: 'Yes, enter balance',
+    submitPrimary: false, // sorting first is the main step
     extraHtml: `
       <p class="muted" style="margin-top:0">Sort the purchases you paid with your own money first, so the Revolut balance is compared fairly.</p>
       ${status ? `<p class="small" data-testid="sorted-status"><b>${esc(status)}</b></p>` : ''}
-      <button type="button" class="btn" style="width:100%" data-act="sort-first">No, sort them first</button>`,
+      <button type="button" class="btn primary" style="width:100%" data-act="sort-first">Sort transactions</button>`,
   });
   const dlg = document.getElementById('form-dialog');
-  dlg.querySelector('button[type="submit"]').focus();
+  dlg.querySelector('[data-act="sort-first"]').focus();
   dlg.querySelector('[data-act="sort-first"]').addEventListener('click', () => {
     sortFirst = true;
     dlg.close();

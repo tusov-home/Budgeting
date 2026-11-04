@@ -19,7 +19,8 @@ export function isFormOpen() {
   return dialog().open;
 }
 
-export function openForm({ title, fields, submitLabel = 'Save', deleteLabel = null, extraHtml = '' }) {
+// submitPrimary: false when another button in extraHtml is the main (green) one.
+export function openForm({ title, fields, submitLabel = 'Save', deleteLabel = null, extraHtml = '', submitPrimary = true }) {
   const dlg = dialog();
   dlg.innerHTML = `
     <form method="dialog" novalidate>
@@ -30,7 +31,7 @@ export function openForm({ title, fields, submitLabel = 'Save', deleteLabel = nu
       <div class="dialog-actions">
         ${deleteLabel ? `<button type="button" class="btn danger" data-act="delete">${esc(deleteLabel)}</button><span class="spacer"></span>` : ''}
         <button type="button" class="btn" data-act="cancel">Cancel <kbd>Esc</kbd></button>
-        <button type="submit" class="btn primary">${esc(submitLabel)}</button>
+        <button type="submit" class="btn ${submitPrimary ? 'primary' : ''}">${esc(submitLabel)}</button>
       </div>
     </form>`;
 
