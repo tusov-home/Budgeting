@@ -13,20 +13,28 @@ import * as monthView from './ui/month.js';
 import * as bigView from './ui/bigcosts.js';
 import * as settingsView from './ui/settings.js';
 import * as purchasesView from './ui/purchases.js';
+import * as rentalsView from './ui/rentals/index.js';
+import * as rentalsStore from './rentals/store.js';
+import * as rentalsSync from './rentals/sync.js';
 import { toSort, sortStatus } from './purchases.js';
 import { installSwipe } from './ui/swipe.js';
 import { installHaptics } from './ui/haptics.js';
 
-// Order = tab order = swipe order.
-// Order = the monthly routine = tab order = swipe order = keys 1–5.
-const VIEWS = { month: monthView, wallet: walletView, buys: purchasesView, big: bigView, settings: settingsView };
+// Order = the monthly routine = tab order = swipe order = keys 1–6.
+const VIEWS = { month: monthView, wallet: walletView, buys: purchasesView, big: bigView, rentals: rentalsView, settings: settingsView };
+
+/** The screens this device shows: Rentals only on Tõnis's devices. */
+function visibleViews() {
+  const rentals = rentalsView.isVisibleFor(state.getDevice().me);
+  return Object.keys(VIEWS).filter((v) => v !== 'rentals' || rentals);
+}
 
 const main = document.getElementById('main');
 let currentMonth = monthKeyOf(new Date());
 
 function currentView() {
   const name = location.hash.replace('#', '');
-  return VIEWS[name] ? name : startView();
+  return visibleViews().includes(name) ? name : startView();
 }
 
 /** Where to start when no screen is chosen: Month until this month is locked, then Wallet. */
@@ -53,13 +61,27 @@ function render() {
   pendingRender = false;
 
   const view = currentView();
+  const shown = visibleViews();
   document.getElementById('month-title').textContent = monthLabel(currentMonth);
   document.querySelectorAll('.tabs a').forEach((a) => {
+    const i = shown.indexOf(a.dataset.view);
+    a.hidden = i === -1;
+    // Tooltip with the tab's key; the label is the link's own text (without icon and badge).
+    a.dataset.label ??= [...a.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+    a.title = `${a.dataset.label} (${i + 1})`;
     if (a.dataset.view === view) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
-  // Month navigation means nothing on the Settings screen.
-  document.querySelector('.month-nav').style.visibility = view === 'settings' ? 'hidden' : 'visible';
+  document.querySelector('.tabs').classList.toggle('six', shown.length === 6);
+  // Month navigation means nothing on Settings and Rentals (Rentals has its own year).
+  document.querySelector('.month-nav').style.visibility = view === 'settings' || view === 'rentals' ? 'hidden' : 'visible';
+  if (shown.includes('rentals')) {
+    rentalsSync.startAutoSync(); // only does something once, and only syncs when set up
+    const rentWaiting = rentalsStore.getUnsorted().length;
+    const rentBadge = document.getElementById('rent-badge');
+    rentBadge.hidden = rentWaiting === 0;
+    rentBadge.textContent = rentWaiting > 99 ? '99+' : String(rentWaiting);
+  }
 
   // Badge on the Purchases tab: how many imported purchases still need sorting.
   // Or "!" when sorting is overdue (last full sort more than a week ago).
@@ -128,17 +150,23 @@ function showHelp() {
   });
 }
 
+// On the Rentals screen, undo/redo and sync work on the private rentals data.
 function doUndo() {
-  if (state.undo()) toast('Undone');
-  else toast('Nothing to undo');
+  const done = currentView() === 'rentals' ? rentalsStore.undo() : state.undo();
+  toast(done ? 'Undone' : 'Nothing to undo');
 }
 
 function doRedo() {
-  if (state.redo()) toast('Redone');
-  else toast('Nothing to redo');
+  const done = currentView() === 'rentals' ? rentalsStore.redo() : state.redo();
+  toast(done ? 'Redone' : 'Nothing to redo');
 }
 
 function doSync() {
+  if (currentView() === 'rentals') {
+    if (!rentalsSync.isConfigured()) toast('Private Sheet not set up yet (Rentals → Setup)');
+    else rentalsSync.syncNow().then((ok) => toast(ok ? 'Synced (private Sheet)' : 'Sync failed, will retry'));
+    return;
+  }
   if (!sync.isConfigured()) {
     toast('Sync is not set up yet (Settings)');
     return;
@@ -152,19 +180,33 @@ const actions = {
   'view:big': () => { location.hash = 'big'; },
   'view:settings': () => { location.hash = 'settings'; },
   'view:buys': () => { location.hash = 'buys'; },
-  import: () => { if (currentView() !== 'buys') location.hash = 'buys'; setTimeout(purchasesView.openImport, 0); },
+  import: () => {
+    if (currentView() === 'rentals') return rentalsView.importAction(main, ctx());
+    if (currentView() !== 'buys') location.hash = 'buys';
+    setTimeout(purchasesView.openImport, 0);
+  },
   prevMonth: () => setMonth(addMonths(currentMonth, -1)),
   nextMonth: () => setMonth(addMonths(currentMonth, 1)),
   today: () => setMonth(monthKeyOf(new Date())),
   checkin: () => walletView.checkIn(ctx()),
   topup: () => walletView.addTopup(ctx()),
-  new: () => { if (currentView() === 'big') bigView.editSpread(ctx()); },
+  new: () => {
+    if (currentView() === 'big') bigView.editSpread(ctx());
+    else if (currentView() === 'rentals') rentalsView.newAction();
+  },
   fixed: () => { location.hash = 'month'; monthView.editFixed(ctx()); },
   help: showHelp,
   undo: doUndo,
   redo: doRedo,
   sync: doSync,
 };
+// Digit keys: the n-th visible tab.
+for (let n = 1; n <= 6; n++) {
+  actions[`tab:${n}`] = () => {
+    const name = visibleViews()[n - 1];
+    if (name) location.hash = name;
+  };
+}
 
 // ---------- new version check ----------
 
@@ -242,7 +284,7 @@ window.addEventListener('hashchange', () => {
 
 /** Go to the screen `step` places away in tab order (+1 = next, −1 = previous). */
 function stepView(step) {
-  const names = Object.keys(VIEWS);
+  const names = visibleViews();
   const i = names.indexOf(currentView()) + step;
   if (i < 0 || i >= names.length) return; // already at the first/last screen
   slideFrom = step > 0 ? 'right' : 'left';
@@ -250,7 +292,7 @@ function stepView(step) {
 }
 
 function canStep(step) {
-  const names = Object.keys(VIEWS);
+  const names = visibleViews();
   const i = names.indexOf(currentView()) + step;
   return i >= 0 && i < names.length;
 }
@@ -277,12 +319,17 @@ state.subscribe(() => {
   // Once there is data worth keeping, ask Chrome not to clear it.
   requestPersistence();
 });
+// Rentals data changes (edits, private sync) → redraw when that screen is shown.
+rentalsStore.subscribe(() => {
+  if (!isFormOpen()) render();
+  else pendingRender = true;
+});
 document.getElementById('form-dialog').addEventListener('close', () => {
   if (pendingRender) render();
 });
 
 // Opened without a screen in the address (e.g. from the home screen icon): pick the right one.
-if (!VIEWS[location.hash.replace('#', '')]) history.replaceState(null, '', `#${startView()}`);
+if (!visibleViews().includes(location.hash.replace('#', ''))) history.replaceState(null, '', `#${startView()}`);
 
 sync.onStatus(renderSyncChip);
 installShortcuts(actions);

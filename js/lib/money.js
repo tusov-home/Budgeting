@@ -50,6 +50,15 @@ export function formatCentsWhole(cents) {
   return formatterWhole.format(Math.round((cents || 0) / 100));
 }
 
+const byCurrency = {};
+/** 123456, 'SEK' → "1.234,56 SEK" (any currency; EUR shows €) */
+export function formatMoney(cents, currency = 'EUR') {
+  if (!byCurrency[currency]) {
+    byCurrency[currency] = new Intl.NumberFormat('de-DE', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  return byCurrency[currency].format((cents || 0) / 100);
+}
+
 /** 123456 → "1234,56" (for pre-filling input fields) */
 export function centsToInput(cents) {
   if (cents === null || cents === undefined) return '';

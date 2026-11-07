@@ -33,20 +33,27 @@ export function isConfigured() {
   return Boolean(d.syncUrl && d.syncKey);
 }
 
-/** Talk to the Apps Script web app. */
-async function call(body) {
-  const d = state.getDevice();
+/**
+ * Talk to an Apps Script web app (apps-script/Code.gs). Also used by the
+ * private Rentals sync, which has its own Sheet, URL and key.
+ */
+export async function postToSheet(url, key, body) {
   // text/plain avoids a CORS "preflight" request, which Apps Script cannot answer.
-  const res = await fetch(d.syncUrl, {
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ ...body, key: d.syncKey }),
+    body: JSON.stringify({ ...body, key }),
     redirect: 'follow',
   });
   if (!res.ok) throw new Error(`The Sheet answered with HTTP ${res.status}`);
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'The Sheet refused the request');
   return data;
+}
+
+function call(body) {
+  const d = state.getDevice();
+  return postToSheet(d.syncUrl, d.syncKey, body);
 }
 
 /** Sync now. Safe to call often: overlapping calls share one run. */
@@ -82,16 +89,9 @@ export function syncNow() {
   return running;
 }
 
-/** Quick check used by the settings screen before saving the details. */
+/** Quick check used by the settings screens before saving the details. */
 export async function testConnection(url, key) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'ping', key }),
-    redirect: 'follow',
-  });
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.error || 'Connection refused');
+  await postToSheet(url, key, { action: 'ping' });
   return true;
 }
 

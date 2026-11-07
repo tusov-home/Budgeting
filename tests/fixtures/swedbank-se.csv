@@ -1,0 +1,5 @@
+* Transaktioner Period 2026-10-01 – 2026-10-31 Skapad 2026-11-02 10:15 CET
+Radnummer,Clearingnummer,Kontonummer,Produkt,Valuta,Bokföringsdag,Transaktionsdag,Valutadag,Referens,Beskrivning,Belopp,Bokfört saldo
+1,8327-9,123 456 789-0,Privatkonto,SEK,2026-10-28,2026-10-28,2026-10-28,"Hemförsäkring","Exempel Försäkring AB",-412.00,8188.00
+2,8327-9,123 456 789-0,Privatkonto,SEK,2026-10-25,2026-10-25,2026-10-25,"Överföring","Egen överföring",2000.00,8600.00
+3,8327-9,123 456 789-0,Privatkonto,SEK,2026-10-02,2026-10-01,2026-10-02,"Kortavgift","Swedbank avgift",-25.00,6600.00

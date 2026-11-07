@@ -49,6 +49,21 @@ to `tusov-home.github.io/Budgeting`, each phone starts empty at the new address:
 4. Phone-only data does not move: unsorted imported purchases, the per-shop suggestions, and phone settings
    (e.g. vibration). Import the latest Revolut statement again; suggestions build up again as you sort.
 
+## Rentals: your own private Sheet (Tõnis only)
+
+The Rentals tab (on devices set to Tõnis) has its own data and its own Sheet, so nothing about the
+Swedbank accounts or the apartments reaches the shared household Sheet.
+
+1. Create a **second** Google Sheet, e.g. "Rentals data". Don't share it.
+2. Same as step 2 above: **Extensions → Apps Script**, paste `apps-script/Code.gs`, run **createKey**
+   (this gives a new, different key), and **Deploy → New deployment → Web app** (Execute as: Me, Who has access: Anyone).
+3. In the app: **Rentals → Setup → Private Sheet**: paste this Sheet's Web app URL and key, **Test and save**.
+   Do the same on the laptop to see the same data there.
+
+Swedbank statements: in the internet bank, open the account statement and export it as **CSV**
+(Swedbank Estonia: *Konto väljavõte → CSV*; Swedbank Sweden: *Transaktioner → Exportera*).
+Then **Rentals → Sort → Import Swedbank CSV**. Importing the same period again adds nothing twice.
+
 ## Later: changing the script
 
 If `Code.gs` changes in a future version: paste the new code, then **Deploy → Manage deployments → edit (pencil) → Version: New version → Deploy**. The URL stays the same.

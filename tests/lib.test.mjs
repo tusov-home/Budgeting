@@ -391,3 +391,107 @@ test('close fingerprint changes when the result changes', () => {
   assert.notEqual(a, closeFingerprint({ finalBalance: 12000, finalDate: '2026-10-31', spent: 81500 }));
   assert.notEqual(a, closeFingerprint({ finalBalance: 12100, finalDate: '2026-10-31', spent: 81000 }));
 });
+
+// ---------- rentals: Swedbank statements and calculations ----------
+import { parseSwedbank, decodeStatement } from '../js/lib/swedbank.js';
+import {
+  yearSummary, monthGrid, toEur, split, dueDates, paymentFor, upcomingPayments, addMonthsToDate, payeeKey,
+} from '../js/lib/rentals.js';
+
+test('Swedbank Estonia: transactions with D/K signs and the closing balance', () => {
+  const s = parseSwedbank(readFileSync(new URL('./fixtures/swedbank-ee.csv', import.meta.url), 'utf8'));
+  assert.equal(s.bank, 'ee');
+  assert.equal(s.currency, 'EUR');
+  assert.equal(s.account, 'EE001234567890123456');
+  assert.equal(s.transactions.length, 6); // opening/turnover/closing rows are not transactions
+  const rent = s.transactions[0];
+  assert.deepEqual([rent.date, rent.amount, rent.party], ['2026-10-03', 65000, 'Mari Maasikas']);
+  assert.equal(s.transactions[1].amount, -5500);
+  assert.equal(s.transactions[4].party, 'Šokolaadi Remont OÜ');
+  assert.equal(s.transactions[0].key, 'ee:2026100300001111');
+  assert.deepEqual(s.balance, { amount: 258033, date: '2026-10-31' });
+});
+
+test('Swedbank Estonia in Windows-1257 encoding keeps š and õ', () => {
+  const text = readFileSync(new URL('./fixtures/swedbank-ee.csv', import.meta.url), 'utf8');
+  const map = { 'š': 0xf0, 'Š': 0xd0, 'õ': 0xf5, 'ä': 0xe4, 'ü': 0xfc, 'Ü': 0xdc, 'ö': 0xf6, 'Õ': 0xd5, 'Ä': 0xc4 };
+  const bytes = Uint8Array.from([...text].map((ch) => map[ch] ?? ch.charCodeAt(0)));
+  const s = parseSwedbank(decodeStatement(bytes));
+  assert.equal(s.transactions[4].party, 'Šokolaadi Remont OÜ');
+  assert.equal(s.transactions.length, 6);
+});
+
+test('Swedbank Sweden: signed SEK amounts, title line, newest booked balance', () => {
+  const s = parseSwedbank(readFileSync(new URL('./fixtures/swedbank-se.csv', import.meta.url), 'utf8'));
+  assert.equal(s.bank, 'se');
+  assert.equal(s.currency, 'SEK');
+  assert.equal(s.account, '8327-9-123 456 789-0');
+  assert.equal(s.transactions.length, 3);
+  assert.deepEqual([s.transactions[0].amount, s.transactions[0].party, s.transactions[0].details], [-41200, 'Exempel Försäkring AB', 'Hemförsäkring']);
+  assert.equal(s.transactions[2].date, '2026-10-01'); // transaction day, not booking day
+  assert.deepEqual(s.balance, { amount: 818800, date: '2026-10-28' });
+  // Same file twice → same keys (no double import)
+  const again = parseSwedbank(readFileSync(new URL('./fixtures/swedbank-se.csv', import.meta.url), 'utf8'));
+  assert.deepEqual(again.transactions.map((t) => t.key), s.transactions.map((t) => t.key));
+});
+
+test('a Revolut file is not taken for a Swedbank statement', () => {
+  assert.throws(() => parseSwedbank('Type,Product,Started Date,Description,Amount\nCARD_PAYMENT,Current,2026-10-01,Shop,-1.00\n'), /Swedbank/);
+});
+
+test('rentals: SEK converted with the year rate, split for both apartments', () => {
+  assert.equal(toEur(112000, 'SEK', 2026, { 2026: 11.2 }), 10000);
+  assert.equal(toEur(112000, 'SEK', 2025, { 2026: 11.2 }), null);
+  assert.equal(toEur(5000, 'EUR', 2026, {}), 5000);
+  assert.deepEqual(split(-101, 'both'), { a: -51, b: -50 });
+  assert.deepEqual(split(500, 'none'), { a: 0, b: 0 });
+});
+
+test('rentals: year summary per apartment', () => {
+  const txs = [
+    { date: '2026-01-03', amount: 65000, currency: 'EUR', apartment: 'a', category: 'rent' },
+    { date: '2026-01-05', amount: -5500, currency: 'EUR', apartment: 'a', category: 'management' },
+    { date: '2026-01-10', amount: 72000, currency: 'EUR', apartment: 'b', category: 'rent' },
+    { date: '2026-02-01', amount: -2000, currency: 'EUR', apartment: 'both', category: 'fees' },
+    { date: '2026-03-01', amount: -112000, currency: 'SEK', apartment: 'b', category: 'insurance' },
+    { date: '2026-03-02', amount: -13000, currency: 'EUR', apartment: 'a', category: 'tax-ee' },
+    { date: '2026-03-03', amount: 99999, currency: 'EUR', apartment: 'none', category: null },
+    { date: '2025-12-31', amount: 65000, currency: 'EUR', apartment: 'a', category: 'rent' },
+  ];
+  const s = yearSummary(txs, 2026, { 2026: 11.2 });
+  assert.equal(s.a.income, 65000);
+  assert.equal(s.a.costs, -5500 - 1000);
+  assert.equal(s.a.tax, -13000);
+  assert.equal(s.a.result, 65000 - 6500); // tax is shown separately, not in the result
+  assert.equal(s.b.costs, -1000 - 10000);
+  assert.equal(s.total.byCategory.rent, 137000);
+  assert.equal(s.unconverted, 0);
+  assert.equal(yearSummary(txs, 2026, {}).unconverted, 1);
+  const grid = monthGrid(txs, 2026, { 2026: 11.2 });
+  assert.equal(grid[0].a.rent, 65000);
+  assert.equal(grid[0].b.rent, 72000);
+  assert.equal(grid[1].a.costs, -1000);
+  assert.equal(grid[2].b.costs, -10000);
+});
+
+test('rentals: due dates and matching payments', () => {
+  assert.equal(addMonthsToDate('2026-01-31', 1), '2026-02-28');
+  const bill = { id: 'b1', name: 'Management', apartment: 'a', category: 'management', amount: 5500, currency: 'EUR', everyMonths: 1, firstDue: '2026-01-05' };
+  assert.deepEqual(dueDates(bill, '2026-09-01', '2026-11-30'), ['2026-09-05', '2026-10-05', '2026-11-05']);
+  const quarterly = { ...bill, everyMonths: 3, firstDue: '2025-03-20' };
+  assert.deepEqual(dueDates(quarterly, '2026-01-01', '2026-12-31'), ['2026-03-20', '2026-06-20', '2026-09-20', '2026-12-20']);
+  const txs = [
+    { date: '2026-10-06', amount: -5500, currency: 'EUR', apartment: 'a', category: 'management', party: 'Haldus OÜ', details: '' },
+    { date: '2026-09-04', amount: -5500, currency: 'EUR', apartment: 'b', category: 'management', party: 'Haldus OÜ', details: '' },
+  ];
+  assert.equal(paymentFor(bill, '2026-10-05', txs), txs[0]);
+  assert.equal(paymentFor(bill, '2026-09-05', txs), null); // other apartment
+  assert.equal(paymentFor({ ...bill, match: 'other company' }, '2026-10-05', txs), null);
+  const up = upcomingPayments([bill], txs, new Set(), '2026-11-02');
+  assert.deepEqual(up.map((u) => [u.due, u.status]), [['2026-09-05', 'overdue'], ['2026-11-05', 'due-soon']]);
+  const marked = upcomingPayments([bill], txs, new Set(['b1|2026-09-05']), '2026-11-02');
+  assert.deepEqual(marked.map((u) => u.status), ['due-soon']);
+  // Before the first imported transaction, payments can't be checked: not shown as overdue.
+  assert.deepEqual(upcomingPayments([bill], txs, new Set(), '2026-11-02', { since: '2026-10-01' }).map((u) => u.status), ['due-soon']);
+  assert.equal(payeeKey('Näidis Haldus OÜ arve 4412'), 'naidis haldus ou arve');
+});

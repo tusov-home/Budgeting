@@ -4,17 +4,13 @@
 import { isFormOpen } from './form.js';
 
 export const SHORTCUTS = [
-  { keys: ['1'], label: 'Month', action: 'view:month' },
-  { keys: ['2'], label: 'Wallet', action: 'view:wallet' },
-  { keys: ['3'], label: 'Purchases', action: 'view:buys' },
-  { keys: ['4'], label: 'Big costs', action: 'view:big' },
-  { keys: ['5'], label: 'Settings', action: 'view:settings' },
-  { keys: ['I'], label: 'Import Revolut statement', action: 'import' },
+  { keys: ['1', '…', '6'], label: 'Screens in tab order: Month, Wallet, Purchases, Big costs, (Rentals,) Settings', action: null },
+  { keys: ['I'], label: 'Import statement (Revolut; Swedbank on Rentals)', action: 'import' },
   { keys: ['←', '→'], label: 'Previous / next month', action: null },
   { keys: ['T'], label: 'Jump to this month', action: 'today' },
   { keys: ['C'], label: 'Check in the Revolut balance', action: 'checkin' },
   { keys: ['A'], label: 'Add money to the wallet', action: 'topup' },
-  { keys: ['N'], label: 'Add big cost (on Big costs)', action: 'new' },
+  { keys: ['N'], label: 'Add big cost (on Big costs); add by hand or a recurring payment (on Rentals)', action: 'new' },
   { keys: ['F'], label: 'Add fixed cost', action: 'fixed' },
   { keys: ['Ctrl', 'Z'], label: 'Undo', action: null },
   { keys: ['Ctrl', 'Y'], label: 'Redo (also Ctrl+Shift+Z)', action: null },
@@ -26,7 +22,8 @@ export const SHORTCUTS = [
 
 // Plain keys (no Ctrl) → action name.
 const PLAIN = {
-  '1': 'view:month', '2': 'view:wallet', '3': 'view:buys', '4': 'view:big', '5': 'view:settings', i: 'import',
+  // Digits follow the visible tabs (Rentals only shows on Tõnis's devices).
+  '1': 'tab:1', '2': 'tab:2', '3': 'tab:3', '4': 'tab:4', '5': 'tab:5', '6': 'tab:6', i: 'import',
   ArrowLeft: 'prevMonth', ArrowRight: 'nextMonth',
   t: 'today', c: 'checkin', a: 'topup', n: 'new', f: 'fixed', '?': 'help',
 };

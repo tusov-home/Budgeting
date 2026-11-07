@@ -160,7 +160,7 @@ button, .tabs a, .row-btn, .seg label {
   border-radius: var(--r-tag); background: var(--warn); color: var(--surface); font-size: 0.7rem; font-weight: 800;
   display: grid; place-items: center; line-height: 1;
 }
-.tab-badge[hidden] { display: none; }
+.tab-badge[hidden], .tabs a[hidden] { display: none; }
 @media (min-width: 800px) { .tab-badge { position: static; } }
 .tabs a[aria-current="page"] { color: var(--accent); }
 
@@ -460,4 +460,71 @@ main.slide-from-left { animation: slide-from-left 0.18s ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+}
+
+/* ---------- Rentals (Tõnis's private page) ---------- */
+
+.rent-head { display: flex; flex-direction: column; gap: 8px; }
+.rent-tabs { flex-wrap: nowrap; overflow-x: auto; }
+.rent-tabs button {
+  flex: 1 0 auto; min-height: 38px; padding: 6px 10px; border: 0; border-radius: calc(var(--r-control) - 3px);
+  background: none; font-weight: 650; font-size: 0.88rem; color: var(--ink-soft); white-space: nowrap;
+}
+.rent-tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+.tab-count {
+  display: inline-block; min-width: 18px; padding: 0 5px; border-radius: var(--r-tag);
+  background: var(--warn); color: var(--surface); font-size: 0.72rem; line-height: 18px;
+}
+.year-nav { display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+.rent-row, .acct-row, .bill-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.rent-row .row-btn, .acct-row .row-btn { justify-content: space-between; min-height: 52px; }
+.rent-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.rent-party { font-weight: 600; overflow-wrap: anywhere; line-height: 1.3; }
+.rent-row .num, .acct-balance { flex: none; text-align: right; font-weight: 650; white-space: nowrap; }
+.rent-row .chip-btn, .bill-row .chip-btn { flex: none; min-width: 44px; padding: 0 10px; }
+.positive { color: var(--good); }
+.warn-text { color: var(--warn); }
+.tag {
+  display: inline-block; align-self: flex-start; padding: 1px 7px; border-radius: var(--r-tag);
+  background: var(--surface-2); color: var(--ink-soft); font-size: 0.78rem; font-weight: 650;
+}
+.tag.suggested { background: var(--accent-soft); color: var(--accent); }
+.tag.overdue { background: var(--bad-soft); color: var(--bad); }
+.tag.due-soon { background: var(--warn-soft); color: var(--warn); }
+.tag.paid { background: var(--good-soft); color: var(--good); }
+.bank-tag {
+  display: inline-block; padding: 0 5px; border-radius: var(--r-tag); font-size: 0.7rem; font-weight: 800;
+  background: var(--surface-2); color: var(--ink-soft); vertical-align: 1px;
+}
+.bank-tag.ee { background: color-mix(in srgb, var(--t-color) 18%, var(--surface)); color: var(--t-color); }
+.bank-tag.se { background: color-mix(in srgb, var(--w-color) 20%, var(--surface)); color: var(--w-color); }
+
+.bill-date { flex: none; width: 52px; font-weight: 650; font-size: 0.88rem; }
+.bill-main { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.bill-end { flex: none; text-align: right; white-space: nowrap; }
+.bill-row.paid .bill-main b { color: var(--ink-soft); }
+
+.table-wrap { overflow-x: auto; margin: 0 -4px; }
+.grid-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.grid-table th, .grid-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: right; }
+.grid-table th:first-child, .grid-table td:first-child { text-align: left; }
+.grid-table thead th { font-size: 0.78rem; color: var(--ink-soft); font-weight: 650; vertical-align: bottom; }
+.grid-table .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.grid-table .ok-cell { color: var(--good); }
+.year-table tbody th { font-weight: 500; }
+@media (max-width: 420px) {
+  .year-table { font-size: 0.82rem; }
+  .year-table th, .year-table td { padding: 6px 3px; }
+}
+.year-table tbody th .small { display: block; }
+.year-table .group th { padding-top: 12px; font-weight: 750; color: var(--ink-soft); text-transform: uppercase; font-size: 0.74rem; letter-spacing: 0.05em; }
+.year-table .sum th, .year-table .sum td { font-weight: 700; }
+.year-table .result th, .year-table .result td { font-weight: 800; border-bottom: 2px solid var(--ink); }
+.year-table .share th, .year-table .share td { font-weight: 700; color: var(--accent); }
+
+/* Six tabs (Rentals shown) on a phone. */
+@media (max-width: 799px) {
+  .tabs.six { grid-template-columns: repeat(6, 1fr); }
+  .tabs.six a { font-size: 0.7rem; padding-left: 2px; padding-right: 2px; }
 }

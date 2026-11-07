@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-07 a
+- **New: Rentals**, a private tab only on devices set to Tõnis, for the Swedbank accounts and the two rental apartments.
+  - **Sort**: import Swedbank Estonia (EUR) and Sweden (SEK) CSV statements, sort each line to an apartment (or both, or not rental) and a category. The choice is remembered per payee and suggested next time. Add lines by hand too.
+  - **Overview**: account balances from the statements (SEK also in euros), upcoming recurring payments (ticked off automatically when a matching transaction is sorted, or by hand), and rent and costs month by month.
+  - **Bills**: recurring payments (monthly, quarterly, half-yearly, yearly).
+  - **Year**: income, costs and result per apartment and in total, with your share; the usual German words next to each category; copy as a table.
+  - **Setup**: apartment names, your share, SEK rate per year, and your own private Sheet (a second Sheet with the same script and its own key).
+  - Never in the shared household Sheet. `Ctrl+Z`, `Ctrl+S`, `I` and `N` work on the Rentals data while you're on that tab.
+- Number keys follow the visible tabs: on Tõnis's devices `5` = Rentals, `6` = Settings.
+
 ## 2026-11-04 d
 - Check in balance → **Sort transactions** now goes to Purchases and opens the same menu as **Import CSV** (on the phone: Open Revolut or Choose file; on a computer: the file picker).
 

@@ -20,11 +20,13 @@ export function isFormOpen() {
 }
 
 // submitPrimary: false when another button in extraHtml is the main (green) one.
-export function openForm({ title, fields, submitLabel = 'Save', deleteLabel = null, extraHtml = '', submitPrimary = true }) {
+// introHtml goes above the fields, extraHtml below them.
+export function openForm({ title, fields, submitLabel = 'Save', deleteLabel = null, extraHtml = '', introHtml = '', submitPrimary = true }) {
   const dlg = dialog();
   dlg.innerHTML = `
     <form method="dialog" novalidate>
       <h2 id="form-dialog-title">${esc(title)}</h2>
+      ${introHtml}
       ${fields.map(fieldHtml).join('')}
       ${extraHtml}
       <p class="form-error" aria-live="polite"></p>
@@ -145,6 +147,11 @@ function fieldInner(f) {
           <input type="radio" id="${id}-${i}" name="${f.name}" value="${esc(o.value)}" ${String(o.value) === String(f.value) ? 'checked' : ''}>
           <label for="${id}-${i}">${esc(o.label)}</label>`).join('')}
         </div>${hint}</div>`;
+    case 'select':
+      return `<div class="field"><label for="${id}">${esc(f.label)}</label>
+        <select id="${id}" name="${f.name}" ${auto}>${f.options.map((o) => `
+          <option value="${esc(o.value)}" ${String(o.value) === String(f.value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}
+        </select>${hint}</div>`;
     case 'checkbox':
       return `<div class="field"><label class="check-field"><input type="checkbox" class="check" name="${f.name}" ${f.value ? 'checked' : ''}> ${esc(f.label)}</label>${hint}</div>`;
     default:

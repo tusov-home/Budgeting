@@ -59,28 +59,29 @@ In the order of the monthly routine. The app opens on Month until the month is l
 | Wallet | Budget left, pace vs. plan, daily/weekly figures, check-ins, added money and withdrawals; app version. For a past month: **close down** (both), then the final result |
 | Purchases | Helper for the check-in, in steps: 1. import and sort, 2. withdraw; reminds after 7 days without sorting. Import the Revolut CSV, sort purchases into common/personal (with suggestions per shop), withdraw the common total; "Already settled before…" clears old purchases without affecting suggestions; recent withdrawals |
 | Big costs | Spread purchases and recurring bills |
+| Rentals | **Only on Tõnis's devices.** Private page for the Swedbank accounts (Estonia EUR, Sweden SEK) and the two rental apartments: Overview (balances, upcoming payments, month by month), Sort (import Swedbank CSV, sort lines to apartment + category, suggestions per payee), Bills (recurring payments), Year (income, costs, result and your share per apartment; copy as a table), Setup (names, share, SEK rates, private Sheet) |
 | Settings | Names, whose phone, sync, backup, shortcuts, privacy |
 
 ## Keyboard shortcuts
 
 | Keys | Action |
 | --- | --- |
-| `1` … `5` | Month / Wallet / Purchases / Big costs / Settings |
-| `I` | Import Revolut statement |
+| `1` … `6` | Screens in tab order: Month / Wallet / Purchases / Big costs / (Rentals) / Settings. Rentals only shows on Tõnis's devices, so there Settings is `6` |
+| `I` | Import Revolut statement (on Rentals: Swedbank statement) |
 | `←` `→` | Previous / next month |
 | `T` | Jump to this month |
 | `C` | Check in the Revolut balance |
 | `A` | Add money to the wallet |
-| `N` | Add big cost (on Big costs) |
+| `N` | Add big cost (on Big costs); on Rentals: add by hand, or a recurring payment on Bills |
 | `F` | Add fixed cost |
-| `Ctrl+Z` / `Ctrl+Y` (or `Ctrl+Shift+Z`) | Undo / redo |
-| `Ctrl+S` | Sync now |
+| `Ctrl+Z` / `Ctrl+Y` (or `Ctrl+Shift+Z`) | Undo / redo (on Rentals: the rentals data) |
+| `Ctrl+S` | Sync now (on Rentals: the private Sheet) |
 | `Enter` / `Esc` | Save / close a form |
 | `?` | Show shortcuts |
 
 Shortcuts don't fire while you type in a field.
 
-On a phone, **swipe left / right** to move between the five screens.
+On a phone, **swipe left / right** to move between the screens.
 
 ## Files
 
@@ -99,6 +100,11 @@ js/lib/budget.js       deposits, big-cost shares, pace (pure functions)
 js/lib/merge.js        merging records from two phones
 js/ui/*.js             one file per screen + form dialog, shortcuts, helpers
 js/ui/closedown.js     closing down last month's wallet (card, result, reminder)
+js/lib/swedbank.js     reading Swedbank Estonia / Sweden CSV statements (pure)
+js/lib/rentals.js      rental categories, year and month totals, recurring payments (pure)
+js/rentals/store.js    Rentals data (own records "hr.*", never in the household Sheet)
+js/rentals/sync.js     sync with Tõnis's private Sheet
+js/ui/rentals/         the Rentals screen: index (sections), overview, sort, bills, year, setup
 apps-script/Code.gs    the backend you paste into the Google Sheet
 sw.js, manifest.webmanifest, icons/   offline start and "Add to Home screen"
 tests/                 unit tests + Playwright end-to-end tests (made-up data)
@@ -111,6 +117,11 @@ Everything is a flat list of **records**, each with `id`, `type`, `updatedAt`, `
 cents. Deleting marks a record `deleted` so the deletion can reach the other phone. When both phones
 changed the same record, the newer change wins.
 
+**Rentals** (Tõnis only) has its own records, stored as `hr.*` in the browser and synced to a separate private Sheet:
+`rsettings` (apartment names, your share, SEK per EUR per year), `racct` (account with its latest balance from a statement),
+`rtx` (one transaction; `apartment` null until sorted, then `a`, `b`, `both` or `none`, plus a `category`),
+`rpayee` (remembered choice per payee), `rbill` (recurring payment), `rpaid` (a payment marked as paid by hand).
+
 ## Tests
 
 ```
@@ -118,6 +129,7 @@ node --test tests/lib.test.mjs     # logic
 python3 tests/app.spec.py          # app on Pixel 7 + 1366 px laptop, incl. two-phone sync (fake Sheet)
 python3 tests/update.spec.py       # a new version arrives on reload despite GitHub's caching
 python3 tests/close.spec.py        # closing down last month on two phones, reopening
+python3 tests/rentals.spec.py      # Rentals: only for Tõnis, Swedbank import, sorting, bills, year, private Sheet
 ```
 
 Test data in `tests/fixtures/` is made up.
@@ -127,6 +139,7 @@ Test data in `tests/fixtures/` is made up.
 - Imported bank statements and purchases marked personal stay on the phone that imported them.
 - Data is kept in the browser on each phone and in **your own** Google Sheet via **your own** Apps Script.
 - The sync key is stored only on the phones and in the script's properties, never in this repository or in backups.
+- **Rentals** data never goes into the shared household Sheet: it stays in the browser and, if set up, in Tõnis's own private Sheet. The tab only shows on devices set to Tõnis. Swedbank statements are read in the app; the files are not uploaded.
 - No analytics, no tracking, no third-party code or fonts.
 - "Forget this phone" in Settings removes everything locally; delete the Sheet to remove the rest.
 

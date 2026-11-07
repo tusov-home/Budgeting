@@ -246,8 +246,8 @@ def run(p):
     check("locked again after both approve", "Budget locked" in page.get_by_test_id("lock-card").inner_text())
     page.goto(BASE)
     check("once locked, opening the app starts on Wallet", page.url.endswith("#wallet"))
-    tabs = page.evaluate("[...document.querySelectorAll('.tabs a')].map(a => a.dataset.view)")
-    check("tabs follow the routine: Month, Wallet, Purchases, Big costs, Settings", tabs == ["month", "wallet", "buys", "big", "settings"])
+    tabs = page.evaluate("[...document.querySelectorAll('.tabs a')].filter(a => !a.hidden).map(a => a.dataset.view)")
+    check("tabs follow the routine: Month, Wallet, Purchases, Big costs, Settings (Kristiina's phone: no Rentals)", tabs == ["month", "wallet", "buys", "big", "settings"])
     page.goto(BASE + "#month")
     be(page, "Tõnis")
 
@@ -405,7 +405,7 @@ def run(p):
         el.dispatchEvent(new TouchEvent('touchend', { bubbles: true, touches: [], changedTouches: [t(100)] }));
     }""")
     page.wait_for_timeout(400)
-    check("swiping on empty space below a short page works (Big costs → Settings)", page.url.endswith("#settings"))
+    check("swiping on empty space below a short page works (Big costs → next tab: Rentals on Tõnis's phone)", page.url.endswith("#rentals"))
     page.goto(BASE + "#month")
     swipe(page, 150)
     check("swipe right on the first screen (Month) stays there and bounces", page.url.endswith("#month") and feedback(page) == "bounce")
