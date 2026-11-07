@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-07 c
+- Rentals → Import Swedbank CSV: the file picker no longer filters by file type, so the statement can't be greyed out whatever type the phone gives it. A wrong file gets a clear message.
+
 ## 2026-11-07 b
 - Rentals → Import Swedbank CSV: the file picker now also offers CSV files the phone labels as Excel files (how Android often saves bank downloads), so Swedbank statements are no longer greyed out.
 - Statements from the English internet bank ("Transfer reference" column) import fully: lines sharing a reference (payment + fee, loan principal + interest) and identical lines on the same day are all kept.

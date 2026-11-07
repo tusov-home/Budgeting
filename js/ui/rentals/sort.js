@@ -22,7 +22,9 @@ export function html(todayKey) {
         <button class="btn" data-rent="manual" title="Add by hand (N)">Add by hand</button>
         ${suggested ? `<button class="btn" data-rent="accept" data-testid="rent-accept">Accept ${suggested} suggestion${suggested === 1 ? '' : 's'}</button>` : ''}
       </div>
-      <input type="file" id="rent-file" accept=".csv,text/csv,text/comma-separated-values,application/vnd.ms-excel,text/plain" multiple hidden>
+      <!-- No "accept" filter on purpose: phones label bank CSVs with all kinds of file types
+           and grey them out. Any file can be picked; a wrong one gets a clear message. -->
+      <input type="file" id="rent-file" multiple hidden>
       ${unsorted.length ? `<ul class="list rent-list">${unsorted.map((t) => row(t, todayKey, true)).join('')}</ul>`
         : '<p class="muted" style="margin:0">Nothing to sort. Import the latest statements from Swedbank Estonia and Sweden (CSV).</p>'}
     </section>
