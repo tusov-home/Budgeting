@@ -382,7 +382,7 @@ input[readonly] { background: var(--surface-2); color: var(--ink-soft); border-s
 
 /* ---------- forms and dialog ---------- */
 
-input[type="text"], input[type="date"], input[type="month"], input[type="number"], input[type="url"], input[type="password"], input[inputmode], select {
+input[type="text"], input[type="date"], input[type="month"], input[type="number"], input[type="url"], input[type="search"], input[type="password"], input[inputmode], select {
   width: 100%; min-height: 46px; padding: 10px 12px;
   border: 1px solid var(--line); border-radius: var(--r-control); background: var(--surface);
 }
@@ -528,3 +528,18 @@ main.slide-from-left { animation: slide-from-left 0.18s ease-out; }
   .tabs.six { grid-template-columns: repeat(6, 1fr); }
   .tabs.six a { font-size: 0.7rem; padding-left: 2px; padding-right: 2px; }
 }
+
+.find-apts { flex-wrap: wrap; margin: 8px 0; }
+.find-apts button {
+  flex: 1 0 auto; min-height: 36px; padding: 4px 10px; border: 0; border-radius: calc(var(--r-control) - 3px);
+  background: none; font-weight: 650; font-size: 0.86rem; color: var(--ink-soft);
+}
+.find-apts button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.find-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.find-summary { margin: 10px 0 4px; }
+.cell-link {
+  border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: inherit; cursor: pointer;
+  text-decoration: underline dotted color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 3px;
+}
+.cell-link:hover { color: var(--accent); }
+input[type="search"]::-webkit-search-cancel-button { cursor: pointer; }

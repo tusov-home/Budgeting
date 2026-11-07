@@ -9,10 +9,12 @@ import * as sort from './sort.js';
 import * as bills from './bills.js';
 import * as year from './year.js';
 import * as setup from './setup.js';
+import * as find from './find.js';
 
 const SECTIONS = [
   { id: 'overview', label: 'Overview' },
   { id: 'sort', label: 'Sort' },
+  { id: 'find', label: 'Find' },
   { id: 'bills', label: 'Bills' },
   { id: 'year', label: 'Year' },
   { id: 'setup', label: 'Setup' },
@@ -45,6 +47,7 @@ export function render(main, ctx) {
   else if (current === 'bills') body = bills.html(todayKey);
   else if (current === 'year') body = year.html(y, yearNav);
   else if (current === 'setup') body = setup.html(todayKey);
+  else if (current === 'find') body = find.html(todayKey);
   else body = overview.html(todayKey, y, yearNav);
 
   main.innerHTML = `
@@ -66,9 +69,19 @@ export function render(main, ctx) {
     shownYear = y + Number(b.dataset.year);
     render(main, ctx);
   }));
-  if (current === 'sort') sort.bind(main);
+  // Open Find with a filter (from the Year table or the "Find…" button).
+  const openFind = (f) => {
+    if (f) find.setFilter(f);
+    section = 'find';
+    render(main, ctx);
+    if (!f) find.focusSearch(main);
+  };
+  if (current === 'sort') {
+    sort.bind(main);
+    main.querySelector('[data-rent="find"]')?.addEventListener('click', () => openFind(null));
+  } else if (current === 'find') find.bind(main, todayKey, () => render(main, ctx));
   else if (current === 'bills') bills.bind(main);
-  else if (current === 'year') year.bind(main, y);
+  else if (current === 'year') year.bind(main, y, openFind);
   else if (current === 'setup') setup.bind(main);
   else overview.bind(main);
 }
@@ -78,6 +91,13 @@ export function importAction(main, ctx) {
   section = 'sort';
   render(main, ctx);
   sort.pickFile(main);
+}
+
+/** / on the Rentals screen: go to Find and focus its search field. */
+export function searchAction(main, ctx) {
+  section = 'find';
+  render(main, ctx);
+  find.focusSearch(main);
 }
 
 /** N on the Rentals screen: a recurring payment on Bills, otherwise a transaction by hand. */

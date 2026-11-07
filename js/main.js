@@ -190,6 +190,11 @@ const actions = {
   today: () => setMonth(monthKeyOf(new Date())),
   checkin: () => walletView.checkIn(ctx()),
   topup: () => walletView.addTopup(ctx()),
+  search: () => {
+    if (!visibleViews().includes('rentals')) return; // Rentals (and its search) is only on Tõnis's devices
+    if (currentView() !== 'rentals') location.hash = 'rentals';
+    setTimeout(() => rentalsView.searchAction(main, ctx()), 0);
+  },
   new: () => {
     if (currentView() === 'big') bigView.editSpread(ctx());
     else if (currentView() === 'rentals') rentalsView.newAction();

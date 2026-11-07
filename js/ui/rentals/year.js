@@ -16,7 +16,11 @@ export function html(year, yearNav = '') {
   const used = (kind) => CATEGORIES.filter((c) => c.kind === kind && ['a', 'b'].some((k) => s[k].byCategory[c.id]));
   const line = (label, get, cls = '') => `<tr class="${cls}"><th scope="row">${label}</th>${['a', 'b', 'total']
     .map((k) => `<td class="num">${esc(num(get(s[k])))}</td>`).join('')}</tr>`;
-  const catLine = (c) => line(`${esc(c.label)} <span class="muted small">${esc(c.de)}</span>`, (x) => x.byCategory[c.id] || 0);
+  // Category rows: tap the name or a number to see the transactions behind it (Find).
+  const catLine = (c) => `<tr><th scope="row"><button class="cell-link" data-find-cat="${c.id}" data-find-apt="all">${esc(c.label)}
+      <span class="muted small">${esc(c.de)}</span></button></th>${['a', 'b', 'total'].map((k) => `
+    <td class="num"><button class="cell-link" data-find-cat="${c.id}" data-find-apt="${k === 'total' ? 'all' : k}"
+      aria-label="Show ${esc(c.label)} ${k === 'total' ? 'all' : esc(names[k])}">${esc(num(s[k].byCategory[c.id] || 0))}</button></td>`).join('')}</tr>`;
   const share = st.share / 100;
   return `<section class="card" data-testid="rent-year">
     <div class="card-head"><h2>Year</h2>${yearNav}</div>
@@ -39,7 +43,7 @@ export function html(year, yearNav = '') {
     </table></div>
     <div class="btn-row" style="margin-top:10px">
       <button class="btn small-btn" data-rent="copy-year" title="Copy as a table (paste into a sheet or e-mail)">Copy table</button></div>
-    <p class="muted small" style="margin:8px 0 0">Costs are negative. Transactions sorted to "Both" are split evenly.
+    <p class="muted small" style="margin:8px 0 0">Tap a category or a number to see its transactions. Costs are negative. Transactions sorted to "Both" are split evenly.
       SEK is converted with the yearly rate in Setup. The German words are only there to help find the right line;
       what counts, and how, is for you and your tax advisor to decide.</p>
   </section>`;
@@ -62,7 +66,10 @@ export function tableText(year) {
   return `Rentals ${year} (EUR)\n${rows.map((r) => r.join('\t')).join('\n')}\n`;
 }
 
-export function bind(main, year) {
+export function bind(main, year, openFind = null) {
+  main.querySelectorAll('[data-find-cat]').forEach((b) => b.addEventListener('click', () => {
+    openFind?.({ category: b.dataset.findCat, apartment: b.dataset.findApt, year: String(year) });
+  }));
   main.querySelector('[data-rent="copy-year"]')?.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(tableText(year));

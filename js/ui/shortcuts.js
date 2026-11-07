@@ -10,6 +10,7 @@ export const SHORTCUTS = [
   { keys: ['T'], label: 'Jump to this month', action: 'today' },
   { keys: ['C'], label: 'Check in the Revolut balance', action: 'checkin' },
   { keys: ['A'], label: 'Add money to the wallet', action: 'topup' },
+  { keys: ['/'], label: 'Search sorted lines (on Rentals)', action: 'search' },
   { keys: ['N'], label: 'Add big cost (on Big costs); add by hand or a recurring payment (on Rentals)', action: 'new' },
   { keys: ['F'], label: 'Add fixed cost', action: 'fixed' },
   { keys: ['Ctrl', 'Z'], label: 'Undo', action: null },
@@ -23,7 +24,7 @@ export const SHORTCUTS = [
 // Plain keys (no Ctrl) → action name.
 const PLAIN = {
   // Digits follow the visible tabs (Rentals only shows on Tõnis's devices).
-  '1': 'tab:1', '2': 'tab:2', '3': 'tab:3', '4': 'tab:4', '5': 'tab:5', '6': 'tab:6', i: 'import',
+  '1': 'tab:1', '2': 'tab:2', '3': 'tab:3', '4': 'tab:4', '5': 'tab:5', '6': 'tab:6', '/': 'search', i: 'import',
   ArrowLeft: 'prevMonth', ArrowRight: 'nextMonth',
   t: 'today', c: 'checkin', a: 'topup', n: 'new', f: 'fixed', '?': 'help',
 };

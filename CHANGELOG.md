@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-07 g
+- Rentals → **Find**: search all sorted lines by payee, description, reference number or amount, and filter by apartment, category and year. Shows how many lines and their total, counted like the Year table. Tap a line to fix it.
+- Rentals → Year: tap a category or any number to open Find with exactly the lines behind it.
+- `/` opens Find with the cursor in the search field (on Tõnis's devices). Sort's "Recently sorted" shows the last 10, with a Find… button for older lines.
+
 ## 2026-11-07 f
 - Rentals → rules can also check the **amount**: *Remember: By text* → *Also by amount? Only between…* (prefilled ±10 % around the line's amount). E.g. one manager bills both flats: the smaller invoice goes to one flat, the bigger to the other. A rule with an amount range wins over one without.
 - For a payee used by both flats, the form starts with the payee as rule text, the amount range chosen, and the payee's usual category.

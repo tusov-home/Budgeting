@@ -12,7 +12,7 @@ import { aptLabel, aptOptions, categoryOptions, catLabel, amountHtml, bankTag, d
 export function html(todayKey) {
   const unsorted = store.getUnsorted();
   const suggested = unsorted.filter((t) => store.suggestionFor(t)).length;
-  const recent = store.getSorted().slice(0, 25);
+  const recent = store.getSorted().slice(0, 10);
   return `
     <section class="card">
       <div class="card-head">
@@ -30,9 +30,10 @@ export function html(todayKey) {
         : '<p class="muted" style="margin:0">Nothing to sort. Import the latest statements from Swedbank Estonia and Sweden (CSV).</p>'}
     </section>
     ${recent.length ? `<section class="card">
-      <h2>Recently sorted</h2>
+      <div class="card-head"><h2>Recently sorted</h2>
+        <button class="btn small-btn" data-rent="find" title="Search all sorted lines (/)">Find…</button></div>
       <ul class="list rent-list">${recent.map((t) => row(t, todayKey, false)).join('')}</ul>
-      <p class="muted small" style="margin:8px 0 0">Tap a line to change or delete it.</p>
+      <p class="muted small" style="margin:8px 0 0">Tap a line to change or delete it. Older lines: Find.</p>
     </section>` : ''}`;
 }
 
@@ -43,7 +44,7 @@ export const ruleLabel = (r, currency = 'EUR') =>
 /** "Rent 450,00 € + Utilities paid by tenant 129,81 €" */
 const partsText = (parts, currency) => parts.map((p) => `${catLabel(p.category)} ${formatMoney(Math.abs(p.amount), currency)}`).join(' + ');
 
-function row(t, todayKey, unsorted) {
+export function row(t, todayKey, unsorted) {
   const s = unsorted ? store.suggestionFor(t) : null;
   // Why this suggestion: your rule's text, or nothing when the payee alone can't tell the apartments apart.
   const why = s && s.rule ? ` (rule ${ruleLabel(s.rule, t.currency)})` : '';
@@ -109,7 +110,7 @@ export function importParsed(st) {
   toast(`${account.name}: ${added} new line${added === 1 ? '' : 's'}${duplicates ? `, ${duplicates} already here` : ''}.${bal}`);
 }
 
-async function sortForm(t) {
+export async function sortForm(t) {
   if (!t) return;
   const s = store.suggestionFor(t);
   const apartment = t.apartment || s?.apartment || 'a';

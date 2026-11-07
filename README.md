@@ -59,7 +59,7 @@ In the order of the monthly routine. The app opens on Month until the month is l
 | Wallet | Budget left, pace vs. plan, daily/weekly figures, check-ins, added money and withdrawals; app version. For a past month: **close down** (both), then the final result |
 | Purchases | Helper for the check-in, in steps: 1. import and sort, 2. withdraw; reminds after 7 days without sorting. Import the Revolut CSV, sort purchases into common/personal (with suggestions per shop), withdraw the common total; "Already settled before…" clears old purchases without affecting suggestions; recent withdrawals |
 | Big costs | Spread purchases and recurring bills |
-| Rentals | **Only on Tõnis's devices.** Private page for the Swedbank accounts (Estonia EUR, Sweden SEK) and the two rental apartments: Overview (balances, upcoming payments, month by month), Sort (import Swedbank CSV, sort lines to apartment + category, suggestions per payee or by your text rules, e.g. a policy number), Bills (recurring payments), Year (income, costs, result and your share per apartment; copy as a table), Setup (names, share, SEK rates, private Sheet) |
+| Rentals | **Only on Tõnis's devices.** Private page for the Swedbank accounts (Estonia EUR, Sweden SEK) and the two rental apartments: Overview (balances, upcoming payments, month by month), Sort (import Swedbank CSV, sort lines to apartment + category, suggestions per payee or by your text rules, e.g. a policy number), Find (search and filter sorted lines; the Year table's rows and numbers open it), Bills (recurring payments), Year (income, costs, result and your share per apartment; copy as a table), Setup (names, share, SEK rates, private Sheet) |
 | Settings | Names, whose phone, sync, backup, shortcuts, privacy |
 
 ## Keyboard shortcuts
@@ -73,6 +73,7 @@ In the order of the monthly routine. The app opens on Month until the month is l
 | `C` | Check in the Revolut balance |
 | `A` | Add money to the wallet |
 | `N` | Add big cost (on Big costs); on Rentals: add by hand, or a recurring payment on Bills |
+| `/` | Search sorted lines (Rentals → Find; Tõnis's devices only) |
 | `F` | Add fixed cost |
 | `Ctrl+Z` / `Ctrl+Y` (or `Ctrl+Shift+Z`) | Undo / redo (on Rentals: the rentals data) |
 | `Ctrl+S` | Sync now (on Rentals: the private Sheet) |
@@ -104,7 +105,7 @@ js/lib/swedbank.js     reading Swedbank Estonia / Sweden CSV statements (pure)
 js/lib/rentals.js      rental categories, year and month totals, recurring payments (pure)
 js/rentals/store.js    Rentals data (own records "hr.*", never in the household Sheet)
 js/rentals/sync.js     sync with Tõnis's private Sheet
-js/ui/rentals/         the Rentals screen: index (sections), overview, sort, bills, year, setup
+js/ui/rentals/         the Rentals screen: index (sections), overview, sort, find, bills, year, setup
 apps-script/Code.gs    the backend you paste into the Google Sheet
 sw.js, manifest.webmanifest, icons/   offline start and "Add to Home screen"
 tests/                 unit tests + Playwright end-to-end tests (made-up data)
