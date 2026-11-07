@@ -129,14 +129,16 @@ def run(p):
     check("importing the same statement again adds nothing", t.get_by_test_id("rent-unsorted").inner_text() == "9")
     t.screenshot(path=str(SHOTS / "rentals-phone-sort.png"), full_page=True)
 
-    def sort_line(party, apt, category=None, remember=True):
+    def sort_line(party, apt, category=None, remember="payee", rule=None):
         t.locator("[data-tx]", has_text=party).first.click()
         dlg = t.locator("#form-dialog")
         dlg.locator(".seg label", has_text=re.compile(f"^{re.escape(apt)}$")).click()
         if category:
             dlg.locator('select[name="category"]').select_option(category)
-        if not remember:
-            dlg.locator('[name="remember"]').uncheck()
+        label = {"payee": "By payee", "text": "By text", "no": "No"}[remember]
+        dlg.locator(".seg label", has_text=re.compile(f"^{label}$")).click()
+        if rule is not None:
+            dlg.locator('[name="ruleText"]').fill(rule)
         dlg.get_by_role("button", name="Save").click()
         t.wait_for_timeout(100)
 
@@ -279,6 +281,34 @@ def run(p):
           "Flat A" in tag_of("põhiosa: 11-000001") and "Flat B" in tag_of("põhiosa: 22-000002"))
     check("…and interest lines without a payee too",
           "Flat A · Loan interest" in tag_of("intress: 11-000001") and "Flat B · Loan interest" in tag_of("intress: 22-000002"))
+    print("Rules by text: two policies from one insurer, one manager for both flats")
+    t.set_input_files("#rent-file", str(FIX / "swedbank-ee-rules-1.csv"))
+    t.wait_for_timeout(300)
+    t.locator("[data-tx]", has_text="Arve 300100").click()
+    check("the form shows the reference number", "90000111" in t.get_by_test_id("rent-sort-info").inner_text())
+    t.keyboard.press("Escape")
+    sort_line("Arve 300100", "Flat A", "insurance", remember="text", rule="90000111")
+    sort_line("Arve 300200", "Flat B", "insurance", remember="text", rule="90000222")
+    sort_line("Arve nr 2026-501", "Flat A", "management")
+    sort_line("Arve nr 2026-502", "Flat B", "management")
+    t.set_input_files("#rent-file", str(FIX / "swedbank-ee-rules-2.csv"))
+    t.wait_for_timeout(300)
+    def tag_for(text):
+        return t.locator(".rent-row", has_text=text).first.locator(".tag").inner_text()
+    check("next month, policy 90000111 → Flat A by its rule", tag_for("Arve 310100").startswith("→ Flat A · Insurance") and '"90000111"' in tag_for("Arve 310100"))
+    check("…and policy 90000222 → Flat B", tag_for("Arve 310200").startswith("→ Flat B · Insurance"))
+    check("a payee used for both flats isn't guessed; it asks for a choice or a rule",
+          "Both apartments use this payee" in tag_for("Arve nr 2026-601"))
+    t.locator("[data-tx]", has_text="Arve nr 2026-601").click()
+    check("…and its form starts on 'By text'", t.locator('#form-dialog input[name="remember"][value="text"]').is_checked())
+    t.keyboard.press("Escape")
+    t.get_by_test_id("rent-tab-setup").click()
+    rules = t.get_by_test_id("rent-rules")
+    check("Setup lists the rules", '"90000111"' in rules.inner_text() and '"90000222"' in rules.inner_text())
+    rules.get_by_role("button", name='Delete rule 90000222').click()
+    check("a rule can be deleted", '"90000222"' not in t.get_by_test_id("rent-rules").inner_text())
+    t.screenshot(path=str(SHOTS / "rentals-phone-rules.png"), full_page=True)
+
     ctx_t.close()
     ctx_k.close()
     browser.close()

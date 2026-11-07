@@ -219,6 +219,26 @@ export function detailsKey(party, details) {
   return d ? `${clean(party)}|${d}` : '';
 }
 
+/** Text for matching rules: lowercase, no accents, words and numbers separated by single spaces. */
+export function matchText(text) {
+  return (text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * The rule that fits a transaction: its text is found in payee, description or reference number.
+ * Longer (more specific) rule texts win. rules: [{ text, apartment, category }].
+ */
+export function ruleFor(tx, rules) {
+  const hay = ` ${matchText(`${tx.party || ''} ${tx.details || ''} ${tx.ref || ''}`)} `;
+  let best = null;
+  for (const r of rules) {
+    const needle = matchText(r.text);
+    if (!needle || !hay.includes(needle)) continue;
+    if (!best || needle.length > matchText(best.text).length) best = r;
+  }
+  return best;
+}
+
 /** Key for remembering the choice for a payee: lowercase letters only, digits dropped (invoice numbers). */
 export function payeeKey(party) {
   return (party || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, ' ').trim();

@@ -1,0 +1,6 @@
+"Client account";"Row type";"Date";"Beneficiary/Payer";"Details";"Amount";"Currency";"Debit/Credit";"Transfer reference";"Transaction type";"Reference number";"Document number";
+"EE008888000033334444";"20";"06.10.2026";"KINDLUSTUS AS";"Arve 300100";"13,17";"EUR";"D";"2026100600000101";"MK";"90000111";"SOP";
+"EE008888000033334444";"20";"12.10.2026";"KINDLUSTUS AS";"Arve 300200";"9,71";"EUR";"D";"2026101200000102";"MK";"90000222";"SOP";
+"EE008888000033334444";"20";"01.10.2026";"HALDUS NÄIDE OÜ";"Arve nr 2026-501";"50,22";"EUR";"D";"2026100100000103";"MK";"";"151";
+"EE008888000033334444";"20";"01.10.2026";"HALDUS NÄIDE OÜ";"Arve nr 2026-502";"89,28";"EUR";"D";"2026100100000104";"MK";"";"152";
+"EE008888000033334444";"86";"31.10.2026";"";"closing balance";"500,00";"EUR";"K";"";"LS";"";"";

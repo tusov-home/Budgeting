@@ -5,6 +5,7 @@ import * as rsync from '../../rentals/sync.js';
 import { testConnection } from '../../sync.js';
 import { esc, toast } from '../dom.js';
 import { openForm } from '../form.js';
+import { aptLabel, catLabel } from './common.js';
 
 export function html(todayKey) {
   const st = store.getSettings();
@@ -27,6 +28,17 @@ export function html(todayKey) {
           <input id="rate-${y}" data-rate="${y}" type="text" inputmode="decimal" placeholder="e.g. 11,20" value="${esc(st.rates[y] ? String(st.rates[y]).replace('.', ',') : '')}"></div>`).join('')}
         <button class="btn" type="submit">Save</button>
       </form>
+    </section>
+
+    <section class="card" data-testid="rent-rules">
+      <h2>Sorting rules</h2>
+      ${store.getRules().length ? `<ul class="list">${store.getRules().map((r) => `
+        <li class="rent-row"><span class="rent-main"><b>"${esc(r.text)}"</b>
+          <span class="muted small">→ ${esc(aptLabel(r.apartment))}${r.category ? ` · ${esc(catLabel(r.category))}` : ''}</span></span>
+          <button class="chip-btn" data-rule-del="${esc(r.id)}" aria-label="Delete rule ${esc(r.text)}">Delete</button></li>`).join('')}</ul>`
+        : '<p class="muted small" style="margin:0">None yet. When sorting a line, choose "Remember: By text" to make one.</p>'}
+      <p class="muted small" style="margin:8px 0 0">A line whose payee, description or reference number contains the text
+        is suggested to that apartment. Rules come before the payee memory; the longest matching text wins.</p>
     </section>
 
     <section class="card">
@@ -68,6 +80,10 @@ const parseNumber = (text) => {
 };
 
 export function bind(main) {
+  main.querySelectorAll('[data-rule-del]').forEach((b) => b.addEventListener('click', () => {
+    store.removeRule(b.dataset.ruleDel);
+    toast('Rule deleted', { label: 'Undo', run: store.undo });
+  }));
   main.querySelector('#rent-apts')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const rates = { ...store.getSettings().rates };

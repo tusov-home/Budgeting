@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-07 d
+- Rentals → Sort: **remember by text**. When sorting a line, choose *Remember: By text* and keep only the part that tells the apartments apart (a word like "Vabriku", a policy or reference number). Lines whose payee, description or reference number contain it are suggested to that apartment. The longest matching text wins; rules come before the payee memory.
+- Reference numbers from the statement are now kept and shown, so rules can use them (also added to lines imported earlier when the statement is imported again).
+- A payee sorted to both apartments is no longer guessed: its lines say "Both apartments use this payee: pick one, or add a rule", and the form starts on *By text*.
+- Rentals → Setup lists the rules, each with Delete.
+
 ## 2026-11-07 c
 - Rentals → Import Swedbank CSV: the file picker no longer filters by file type, so the statement can't be greyed out whatever type the phone gives it. A wrong file gets a clear message.
 

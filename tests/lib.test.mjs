@@ -396,6 +396,7 @@ test('close fingerprint changes when the result changes', () => {
 import { parseSwedbank, decodeStatement } from '../js/lib/swedbank.js';
 import {
   yearSummary, monthGrid, toEur, split, dueDates, paymentFor, upcomingPayments, addMonthsToDate, payeeKey, detailsKey,
+  ruleFor, matchText,
 } from '../js/lib/rentals.js';
 
 test('Swedbank Estonia: transactions with D/K signs and the closing balance', () => {
@@ -509,4 +510,18 @@ test('rentals: due dates and matching payments', () => {
   // Before the first imported transaction, payments can't be checked: not shown as overdue.
   assert.deepEqual(upcomingPayments([bill], txs, new Set(), '2026-11-02', { since: '2026-10-01' }).map((u) => u.status), ['due-soon']);
   assert.equal(payeeKey('Näidis Haldus OÜ arve 4412'), 'naidis haldus ou arve');
+});
+
+test('rentals: rules match text in payee, description or reference; the longest wins', () => {
+  const rules = [
+    { text: 'Vabriku', apartment: 'a', category: 'association' },
+    { text: '90000222', apartment: 'b', category: 'insurance' },
+    { text: 'Arve', apartment: 'a', category: 'insurance' }, // short, general rule
+  ];
+  assert.equal(ruleFor({ party: 'TALLINN, LINDA TN 2 // VABRIKU TN 8A KÜ', details: 'Arve M089401514' }, rules).apartment, 'a');
+  // Both "Arve" and "90000222" fit: the longer (more specific) text wins.
+  assert.equal(ruleFor({ party: 'KINDLUSTUS AS', details: 'Arve 1', ref: '90000222' }, rules).apartment, 'b');
+  assert.equal(ruleFor({ party: 'KINDLUSTUS AS', details: 'Arve 1', ref: '90000111' }, rules).apartment, 'a');
+  assert.equal(ruleFor({ party: 'Elisa', details: 'Bill 9000022', ref: '' }, rules), null);
+  assert.equal(matchText('Kungla tn 12A KÜ'), 'kungla tn 12a ku');
 });

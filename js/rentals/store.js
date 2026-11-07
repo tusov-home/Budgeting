@@ -11,12 +11,15 @@
 //   rtx        one transaction: { accountId, date, amount, currency, party, details, apartment, category, source }
 //              apartment null = not sorted yet (see lib/rentals.js)
 //   rpayee     remembered choice: { apartment, category }, per payee ("rpayee:<payee>") and
-//              per payee + exact description ("rpayee:d:<payee>|<description>"), which wins when both exist
+//              per payee + exact description ("rpayee:d:<payee>|<description>"), which wins when both exist.
+//              A payee sorted to different apartments gets mixed: true and suggests nothing on its own.
+//   rrule      your own rule: lines whose payee, description or reference contain `text`
+//              go to { apartment, category }. Rules win over everything else.
 //   rbill      a recurring payment (see lib/rentals.js)
 //   rpaid      a bill's payment marked as paid by hand: { billId, due }
 
 import { mergeRecords } from '../lib/merge.js';
-import { payeeKey, detailsKey, defaultCategory } from '../lib/rentals.js';
+import { payeeKey, detailsKey, defaultCategory, ruleFor, matchText } from '../lib/rentals.js';
 import { transactionKey } from '../lib/revolut.js';
 
 const KEYS = {
@@ -189,21 +192,43 @@ export const getSorted = () => getTransactions().filter((t) => t.apartment);
 export const getBills = () => live('rbill').sort((a, b) => a.name.localeCompare(b.name));
 export const getPaidMarks = () => new Set(live('rpaid').map((r) => `${r.billId}|${r.due}`));
 
+export const getRules = () => live('rrule').sort((a, b) => a.text.localeCompare(b.text));
+
 /**
- * Remembered choice for this line: { apartment, category } or null.
- * The same description as before wins (two loans from one payee, interest lines without a payee);
- * otherwise the payee's last choice.
+ * Suggested choice for this line: { apartment, category, source, rule } or null. In this order:
+ *   1. your rule whose text is in the payee, description or reference ("rule")
+ *   2. the same payee + exact description as before ("description"), e.g. a loan's interest line
+ *   3. the payee's last choice ("payee"), unless that payee went to different apartments
  */
 export function suggestionFor(tx) {
-  const dKey = detailsKey(tx.party, tx.details);
-  const pKey = payeeKey(tx.party);
-  const r = (dKey && get(`rpayee:d:${dKey}`)) || (pKey && get(`rpayee:${pKey}`));
+  const rule = ruleFor(tx, getRules());
+  let r = rule;
+  let source = 'rule';
+  if (!r) {
+    const dKey = detailsKey(tx.party, tx.details);
+    r = dKey && get(`rpayee:d:${dKey}`);
+    source = 'description';
+  }
+  if (!r) {
+    const pKey = payeeKey(tx.party);
+    const p = pKey && get(`rpayee:${pKey}`);
+    r = p && !p.mixed ? p : null;
+    source = 'payee';
+  }
   if (!r) return null;
   // A remembered "rent" for money going out makes no sense: fall back to a cost.
   const category = r.apartment === 'none' ? null
     : (tx.amount < 0 && r.category === 'rent') ? defaultCategory(tx.amount) : r.category;
-  return { apartment: r.apartment, category };
+  return { apartment: r.apartment, category, source, rule: rule || null };
 }
+
+/** Lines of this payee were sorted to more than one apartment (so the payee alone says nothing). */
+export function payeeIsMixed(tx) {
+  const p = get(`rpayee:${payeeKey(tx.party)}`);
+  return Boolean(p && p.mixed);
+}
+
+export const removeRule = (id) => remove(id);
 
 // ---------- importing and sorting ----------
 
@@ -234,11 +259,13 @@ export function importStatement(st) {
     const txId = `rtx:${t.key}`;
     if (records[txId]) { // also when deleted: don't bring back a line removed on purpose
       duplicates++;
+      // Lines imported before reference numbers were kept: add it now (rules can use it).
+      if (!records[txId].deleted && t.ref && !records[txId].ref) changes.push({ id: txId, ref: t.ref });
       continue;
     }
     changes.push({
       id: txId, type: 'rtx', month: t.date.slice(0, 7), accountId: id, date: t.date, amount: t.amount,
-      currency: t.currency || st.currency, party: t.party, details: t.details,
+      currency: t.currency || st.currency, party: t.party, details: t.details, ref: t.ref || '',
       apartment: null, category: null, source: 'import',
     });
     added++;
@@ -247,8 +274,12 @@ export function importStatement(st) {
   return { added, duplicates, account: acct };
 }
 
-/** Sort one transaction; remember the choice for its payee (unless remember is false). */
-export function sortTx(id, apartment, category, { remember = true } = {}) {
+/**
+ * Sort one transaction and remember the choice:
+ *   remember: 'payee' (payee + exact description) | 'text' (a rule for ruleText) | false
+ * The payee memory notices when one payee goes to different apartments (mixed).
+ */
+export function sortTx(id, apartment, category, { remember = 'payee', ruleText = '' } = {}) {
   const tx = get(id);
   if (!tx) return;
   const cat = apartment === 'none' ? null : category;
@@ -256,8 +287,16 @@ export function sortTx(id, apartment, category, { remember = true } = {}) {
   if (remember) {
     const pKey = payeeKey(tx.party);
     const dKey = detailsKey(tx.party, tx.details);
-    if (pKey) changes.push({ id: `rpayee:${pKey}`, type: 'rpayee', apartment, category: cat });
+    if (pKey) {
+      const old = get(`rpayee:${pKey}`);
+      const mixed = Boolean(old && (old.mixed || (old.apartment !== apartment && apartment !== 'none' && old.apartment !== 'none')));
+      changes.push({ id: `rpayee:${pKey}`, type: 'rpayee', apartment, category: cat, mixed });
+    }
     if (dKey) changes.push({ id: `rpayee:d:${dKey}`, type: 'rpayee', apartment, category: cat });
+  }
+  const text = matchText(ruleText);
+  if (remember === 'text' && text) {
+    changes.push({ id: `rrule:${text}`, type: 'rrule', text: ruleText.trim(), apartment, category: cat });
   }
   put(...changes);
 }

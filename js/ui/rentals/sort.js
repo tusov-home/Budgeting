@@ -37,14 +37,17 @@ export function html(todayKey) {
 
 function row(t, todayKey, unsorted) {
   const s = unsorted ? store.suggestionFor(t) : null;
+  // Why this suggestion: your rule's text, or nothing when the payee alone can't tell the apartments apart.
+  const why = s && s.rule ? ` (rule "${s.rule.text}")` : '';
   const tag = unsorted
-    ? (s ? `<span class="tag suggested">→ ${esc(aptLabel(s.apartment))}${s.category ? ` · ${esc(catLabel(s.category))}` : ''}</span>` : '')
+    ? (s ? `<span class="tag suggested">→ ${esc(aptLabel(s.apartment))}${s.category ? ` · ${esc(catLabel(s.category))}` : ''}${esc(why)}</span>`
+      : store.payeeIsMixed(t) ? '<span class="tag due-soon">Both apartments use this payee: pick one, or add a rule</span>' : '')
     : `<span class="tag">${esc(aptLabel(t.apartment))}${t.category ? ` · ${esc(catLabel(t.category))}` : ''}</span>`;
   return `<li class="rent-row" data-testid="rent-row">
     <button class="row-btn" data-tx="${esc(t.id)}">
       <span class="rent-main">
         <span class="rent-party">${bankTag(t.accountId)} ${esc(t.party || t.details || '(no name)')}</span>
-        <span class="muted small">${esc(dayLabel(t.date, todayKey))}${t.details && t.party ? ` · ${esc(t.details)}` : ''}</span>
+        <span class="muted small">${esc(dayLabel(t.date, todayKey))}${t.details && t.party ? ` · ${esc(t.details)}` : ''}${t.ref ? ` · ref. ${esc(t.ref)}` : ''}</span>
         ${tag}
       </span>
       ${amountHtml(t.amount, t.currency)}
@@ -101,15 +104,21 @@ async function sortForm(t) {
   const s = store.suggestionFor(t);
   const apartment = t.apartment || s?.apartment || 'a';
   const category = t.category || s?.category || defaultCategory(t.amount);
+  // Remember by text when a rule already fits, or when the payee alone can't tell the apartments apart.
+  const byText = Boolean(s?.rule) || store.payeeIsMixed(t) || !t.party;
   const values = await openForm({
     title: t.party || 'Transaction',
     introHtml: `<p class="muted" style="margin-top:0" data-testid="rent-sort-info">${esc(dayLabel(t.date, dateKeyOf(new Date())))} · ${amountHtml(t.amount, t.currency)}
-      ${t.details ? `<br>${esc(t.details)}` : ''}</p>`,
+      ${t.details ? `<br>${esc(t.details)}` : ''}${t.ref ? `<br>Reference number: ${esc(t.ref)}` : ''}</p>`,
     fields: [
       { name: 'apartment', label: 'Apartment', type: 'choice', value: apartment, options: aptOptions(true) },
       { name: 'category', label: 'Category', type: 'select', value: category, options: categoryOptions(t.amount),
         hint: 'Not needed for "Not rental".' },
-      { name: 'remember', label: `Remember for "${t.party || 'this payee'}"`, type: 'checkbox', value: true },
+      { name: 'remember', label: 'Remember for next time', type: 'choice', value: byText ? 'text' : 'payee',
+        options: [{ value: 'payee', label: 'By payee' }, { value: 'text', label: 'By text' }, { value: 'no', label: 'No' }] },
+      { name: 'ruleText', label: 'Lines containing this text', type: 'text',
+        value: s?.rule?.text || t.details || t.party || '', showIf: { field: 'remember', value: 'text' },
+        hint: 'Shorten it to the part only this apartment\'s lines have: a word like "Vabriku", a policy or reference number. Payee, description and reference are searched.' },
     ],
     submitLabel: 'Save',
     deleteLabel: t.source === 'manual' || t.apartment ? 'Delete' : null,
@@ -120,7 +129,13 @@ async function sortForm(t) {
     toast('Deleted', { label: 'Undo', run: store.undo });
     return;
   }
-  store.sortTx(t.id, values.apartment, values.category, { remember: values.remember });
+  if (values.remember === 'text' && !values.ruleText.trim()) {
+    toast('Please enter the text to look for, or choose "By payee"');
+    return;
+  }
+  store.sortTx(t.id, values.apartment, values.category, {
+    remember: values.remember === 'no' ? false : values.remember, ruleText: values.ruleText,
+  });
   toast(`${t.party || 'Line'}: ${aptLabel(values.apartment)}${values.apartment === 'none' ? '' : ` · ${catLabel(values.category)}`}`,
     { label: 'Undo', run: store.undo });
 }

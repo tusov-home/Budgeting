@@ -59,7 +59,7 @@ In the order of the monthly routine. The app opens on Month until the month is l
 | Wallet | Budget left, pace vs. plan, daily/weekly figures, check-ins, added money and withdrawals; app version. For a past month: **close down** (both), then the final result |
 | Purchases | Helper for the check-in, in steps: 1. import and sort, 2. withdraw; reminds after 7 days without sorting. Import the Revolut CSV, sort purchases into common/personal (with suggestions per shop), withdraw the common total; "Already settled before…" clears old purchases without affecting suggestions; recent withdrawals |
 | Big costs | Spread purchases and recurring bills |
-| Rentals | **Only on Tõnis's devices.** Private page for the Swedbank accounts (Estonia EUR, Sweden SEK) and the two rental apartments: Overview (balances, upcoming payments, month by month), Sort (import Swedbank CSV, sort lines to apartment + category, suggestions per payee), Bills (recurring payments), Year (income, costs, result and your share per apartment; copy as a table), Setup (names, share, SEK rates, private Sheet) |
+| Rentals | **Only on Tõnis's devices.** Private page for the Swedbank accounts (Estonia EUR, Sweden SEK) and the two rental apartments: Overview (balances, upcoming payments, month by month), Sort (import Swedbank CSV, sort lines to apartment + category, suggestions per payee or by your text rules, e.g. a policy number), Bills (recurring payments), Year (income, costs, result and your share per apartment; copy as a table), Setup (names, share, SEK rates, private Sheet) |
 | Settings | Names, whose phone, sync, backup, shortcuts, privacy |
 
 ## Keyboard shortcuts
@@ -120,7 +120,9 @@ changed the same record, the newer change wins.
 **Rentals** (Tõnis only) has its own records, stored as `hr.*` in the browser and synced to a separate private Sheet:
 `rsettings` (apartment names, your share, SEK per EUR per year), `racct` (account with its latest balance from a statement),
 `rtx` (one transaction; `apartment` null until sorted, then `a`, `b`, `both` or `none`, plus a `category`),
-`rpayee` (remembered choice per payee), `rbill` (recurring payment), `rpaid` (a payment marked as paid by hand).
+`rpayee` (remembered choice per payee, and per payee + exact description; a payee used for both apartments is marked `mixed` and not guessed),
+`rrule` (your rule: lines whose payee, description or reference number contain `text` go to an apartment and category; longest text wins),
+`rbill` (recurring payment), `rpaid` (a payment marked as paid by hand).
 
 ## Tests
 
