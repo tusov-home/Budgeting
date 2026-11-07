@@ -114,11 +114,15 @@ function keepVisible(el) {
 }
 
 // Fields with showIf: { field: 'kind', value: 'oneoff' } only show when that choice is picked.
+// A list of conditions shows the field only when all of them hold.
 function applyShowIf(form, fields) {
   for (const f of fields) {
     if (!f.showIf) continue;
-    const checked = form.querySelector(`input[name="${f.showIf.field}"]:checked`);
-    const visible = checked && checked.value === String(f.showIf.value);
+    const conditions = Array.isArray(f.showIf) ? f.showIf : [f.showIf];
+    const visible = conditions.every((c) => {
+      const checked = form.querySelector(`input[name="${c.field}"]:checked`);
+      return checked && checked.value === String(c.value);
+    });
     form.querySelector(`[data-field="${f.name}"]`).hidden = !visible;
   }
 }

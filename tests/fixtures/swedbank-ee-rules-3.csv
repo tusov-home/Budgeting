@@ -1,0 +1,4 @@
+"Client account";"Row type";"Date";"Beneficiary/Payer";"Details";"Amount";"Currency";"Debit/Credit";"Transfer reference";"Transaction type";"Reference number";"Document number";
+"EE008888000033334444";"20";"01.12.2026";"HALDUS NÄIDE OÜ";"Arve nr 2026-701";"51,40";"EUR";"D";"2026120100000301";"MK";"";"171";
+"EE008888000033334444";"20";"01.12.2026";"HALDUS NÄIDE OÜ";"Arve nr 2026-702";"88,10";"EUR";"D";"2026120100000302";"MK";"";"172";
+"EE008888000033334444";"86";"01.12.2026";"";"closing balance";"260,50";"EUR";"K";"";"LS";"";"";

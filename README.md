@@ -122,7 +122,7 @@ changed the same record, the newer change wins.
 `rtx` (one transaction; `apartment` null until sorted, then `a`, `b`, `both` or `none`, plus a `category`;
 a split payment also has `parts: [{ category, amount }]`, e.g. rent + utilities, remembered as `split: { firstAmount, category2 }` with the payee or rule),
 `rpayee` (remembered choice per payee, and per payee + exact description; a payee used for both apartments is marked `mixed` and not guessed),
-`rrule` (your rule: lines whose payee, description or reference number contain `text` go to an apartment and category; longest text wins),
+`rrule` (your rule: lines whose payee, description or reference number contain `text`, optionally only with an amount between `min` and `max`, go to an apartment and category; a rule with an amount range wins, then the longest text),
 `rbill` (recurring payment), `rpaid` (a payment marked as paid by hand).
 
 ## Tests

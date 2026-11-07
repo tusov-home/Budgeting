@@ -254,18 +254,31 @@ export function matchText(text) {
 }
 
 /**
- * The rule that fits a transaction: its text is found in payee, description or reference number.
- * Longer (more specific) rule texts win. rules: [{ text, apartment, category }].
+ * The rule that fits a transaction: its text is found in payee, description or reference number,
+ * and, if the rule has an amount range (min/max in cents, compared without sign), the amount is in it.
+ * rules: [{ text, min?, max?, apartment, category }].
+ * A rule with an amount range is more specific and wins; otherwise the longer text wins.
  */
 export function ruleFor(tx, rules) {
   const hay = ` ${matchText(`${tx.party || ''} ${tx.details || ''} ${tx.ref || ''}`)} `;
+  const amount = Math.abs(tx.amount || 0);
+  const score = (r) => (hasRange(r) ? 100000 : 0) + matchText(r.text).length;
   let best = null;
   for (const r of rules) {
     const needle = matchText(r.text);
     if (!needle || !hay.includes(needle)) continue;
-    if (!best || needle.length > matchText(best.text).length) best = r;
+    if (hasRange(r) && (amount < r.min || amount > r.max)) continue;
+    if (!best || score(r) > score(best)) best = r;
   }
   return best;
+}
+
+export const hasRange = (r) => Number.isFinite(r.min) && Number.isFinite(r.max);
+
+/** Suggested amount range around an amount: ±10 %, rounded to whole euros (e.g. 50,22 → 45–56). */
+export function rangeAround(cents) {
+  const a = Math.abs(cents);
+  return { min: Math.floor((a * 0.9) / 100) * 100, max: Math.ceil((a * 1.1) / 100) * 100 };
 }
 
 /** Key for remembering the choice for a payee: lowercase letters only, digits dropped (invoice numbers). */

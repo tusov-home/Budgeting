@@ -15,6 +15,7 @@
 //              per payee + exact description ("rpayee:d:<payee>|<description>"), which wins when both exist.
 //              A payee sorted to different apartments gets mixed: true and suggests nothing on its own.
 //   rrule      your own rule: lines whose payee, description or reference contain `text`
+//              (and, with min/max in cents, whose amount is in that range: e.g. one manager, two flats)
 //              go to { apartment, category }. Rules win over everything else.
 //   Remembered choices and rules can carry split: { firstAmount, category2 }: the first part
 //   (e.g. the usual rent) goes to `category`, the rest to category2.
@@ -195,7 +196,7 @@ export const getSorted = () => getTransactions().filter((t) => t.apartment);
 export const getBills = () => live('rbill').sort((a, b) => a.name.localeCompare(b.name));
 export const getPaidMarks = () => new Set(live('rpaid').map((r) => `${r.billId}|${r.due}`));
 
-export const getRules = () => live('rrule').sort((a, b) => a.text.localeCompare(b.text));
+export const getRules = () => live('rrule').sort((a, b) => a.text.localeCompare(b.text) || (a.min ?? -1) - (b.min ?? -1));
 
 /**
  * Suggested choice for this line: { apartment, category, source, rule } or null. In this order:
@@ -223,6 +224,12 @@ export function suggestionFor(tx) {
   const category = r.apartment === 'none' ? null
     : (tx.amount < 0 && r.category === 'rent') ? defaultCategory(tx.amount) : r.category;
   return { apartment: r.apartment, category, source, rule: rule || null, split: r.apartment === 'none' ? null : r.split || null };
+}
+
+/** The payee's last category, even when its apartment is unclear (mixed): a good start for the form. */
+export function payeeCategory(tx) {
+  const p = get(`rpayee:${payeeKey(tx.party)}`);
+  return p && p.category ? p.category : null;
 }
 
 /** Lines of this payee were sorted to more than one apartment (so the payee alone says nothing). */
@@ -282,7 +289,7 @@ export function importStatement(st) {
  *   remember: 'payee' (payee + exact description) | 'text' (a rule for ruleText) | false
  * The payee memory notices when one payee goes to different apartments (mixed).
  */
-export function sortTx(id, apartment, category, { remember = 'payee', ruleText = '', split = null } = {}) {
+export function sortTx(id, apartment, category, { remember = 'payee', ruleText = '', ruleRange = null, split = null } = {}) {
   const tx = get(id);
   if (!tx) return;
   const cat = apartment === 'none' ? null : category;
@@ -302,7 +309,10 @@ export function sortTx(id, apartment, category, { remember = 'payee', ruleText =
   }
   const text = matchText(ruleText);
   if (remember === 'text' && text) {
-    changes.push({ id: `rrule:${text}`, type: 'rrule', text: ruleText.trim(), apartment, category: cat, split: keep });
+    // One rule per text and amount range, so "Kaanon 45–56 €" and "Kaanon 80–99 €" can point to different flats.
+    const range = ruleRange && ruleRange.min <= ruleRange.max ? { min: ruleRange.min, max: ruleRange.max } : { min: null, max: null };
+    const rid = range.min === null ? `rrule:${text}` : `rrule:${text}|${range.min}-${range.max}`;
+    changes.push({ id: rid, type: 'rrule', text: ruleText.trim(), ...range, apartment, category: cat, split: keep });
   }
   put(...changes);
 }

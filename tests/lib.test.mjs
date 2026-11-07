@@ -396,7 +396,7 @@ test('close fingerprint changes when the result changes', () => {
 import { parseSwedbank, decodeStatement } from '../js/lib/swedbank.js';
 import {
   yearSummary, monthGrid, toEur, split, dueDates, paymentFor, upcomingPayments, addMonthsToDate, payeeKey, detailsKey,
-  ruleFor, matchText, partsOf, makeParts,
+  ruleFor, matchText, partsOf, makeParts, rangeAround,
 } from '../js/lib/rentals.js';
 
 test('Swedbank Estonia: transactions with D/K signs and the closing balance', () => {
@@ -543,4 +543,19 @@ test('rentals: one payment split into rent + utilities', () => {
   assert.equal(y.b.byCategory['utilities-in'], 12981);
   assert.equal(y.b.income, 57981);
   assert.equal(monthGrid([t], 2026, {})[9].b.rent, 45000); // the month grid shows the rent part only
+});
+
+test('rentals: rules with an amount range (one manager, two flats)', () => {
+  const rules = [
+    { text: 'Kaanon', min: 4500, max: 5600, apartment: 'a', category: 'management' },
+    { text: 'Kaanon', min: 8000, max: 9900, apartment: 'b', category: 'management' },
+    { text: 'Kaanon', apartment: 'none', category: null }, // without a range: only when no range fits
+  ];
+  const line = (amount) => ({ party: 'KAANON TALLINN OÜ', details: 'Arve nr 2026-305', amount });
+  assert.equal(ruleFor(line(-5022), rules).apartment, 'a');
+  assert.equal(ruleFor(line(-8928), rules).apartment, 'b');
+  assert.equal(ruleFor(line(-12000), rules).apartment, 'none');
+  assert.equal(ruleFor(line(-12000), rules.slice(0, 2)), null);
+  assert.deepEqual(rangeAround(-5022), { min: 4500, max: 5600 });
+  assert.deepEqual(rangeAround(8928), { min: 8000, max: 9900 });
 });

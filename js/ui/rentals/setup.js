@@ -6,6 +6,7 @@ import { testConnection } from '../../sync.js';
 import { esc, toast } from '../dom.js';
 import { openForm } from '../form.js';
 import { aptLabel, catLabel } from './common.js';
+import { ruleLabel } from './sort.js';
 
 export function html(todayKey) {
   const st = store.getSettings();
@@ -33,12 +34,13 @@ export function html(todayKey) {
     <section class="card" data-testid="rent-rules">
       <h2>Sorting rules</h2>
       ${store.getRules().length ? `<ul class="list">${store.getRules().map((r) => `
-        <li class="rent-row"><span class="rent-main"><b>"${esc(r.text)}"</b>
+        <li class="rent-row"><span class="rent-main"><b>${esc(ruleLabel(r))}</b>
           <span class="muted small">→ ${esc(aptLabel(r.apartment))}${r.category ? ` · ${esc(catLabel(r.category))}` : ''}</span></span>
-          <button class="chip-btn" data-rule-del="${esc(r.id)}" aria-label="Delete rule ${esc(r.text)}">Delete</button></li>`).join('')}</ul>`
+          <button class="chip-btn" data-rule-del="${esc(r.id)}" aria-label="Delete rule ${esc(ruleLabel(r))}">Delete</button></li>`).join('')}</ul>`
         : '<p class="muted small" style="margin:0">None yet. When sorting a line, choose "Remember: By text" to make one.</p>'}
       <p class="muted small" style="margin:8px 0 0">A line whose payee, description or reference number contains the text
-        is suggested to that apartment. Rules come before the payee memory; the longest matching text wins.</p>
+        is suggested to that apartment (if the rule has an amount range, only amounts in it). Rules come before the payee memory;
+        a rule with an amount range wins, then the longest matching text.</p>
     </section>
 
     <section class="card">

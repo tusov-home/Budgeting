@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-07 f
+- Rentals → rules can also check the **amount**: *Remember: By text* → *Also by amount? Only between…* (prefilled ±10 % around the line's amount). E.g. one manager bills both flats: the smaller invoice goes to one flat, the bigger to the other. A rule with an amount range wins over one without.
+- For a payee used by both flats, the form starts with the payee as rule text, the amount range chosen, and the payee's usual category.
+- Rentals → Setup shows each rule's amount range.
+
 ## 2026-11-07 e
 - Rentals → Sort: **split one payment into two parts**, e.g. rent + utilities from the same tenant. Choose *Split: Yes*, enter the rent; the rest goes to the second category (new: *Utilities paid by tenant*, "Umlagen").
 - The split is remembered with the payee or rule: next month the same rent amount is suggested with the new rest, and ✓ accepts it in one tap.

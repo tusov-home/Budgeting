@@ -2,7 +2,7 @@
 
 import * as store from '../../rentals/store.js';
 import { parseSwedbank, decodeStatement } from '../../lib/swedbank.js';
-import { defaultCategory, partsOf, makeParts } from '../../lib/rentals.js';
+import { defaultCategory, partsOf, makeParts, hasRange, rangeAround } from '../../lib/rentals.js';
 import { formatMoney } from '../../lib/money.js';
 import { dateKeyOf } from '../../lib/months.js';
 import { esc, toast } from '../dom.js';
@@ -36,13 +36,17 @@ export function html(todayKey) {
     </section>` : ''}`;
 }
 
+/** '"Kaanon" 45,00–56,00 €' or '"Vabriku"' */
+export const ruleLabel = (r, currency = 'EUR') =>
+  `"${r.text}"${hasRange(r) ? ` ${formatMoney(r.min, currency).replace(/\s?[€A-Z]+$/, '')}–${formatMoney(r.max, currency)}` : ''}`;
+
 /** "Rent 450,00 € + Utilities paid by tenant 129,81 €" */
 const partsText = (parts, currency) => parts.map((p) => `${catLabel(p.category)} ${formatMoney(Math.abs(p.amount), currency)}`).join(' + ');
 
 function row(t, todayKey, unsorted) {
   const s = unsorted ? store.suggestionFor(t) : null;
   // Why this suggestion: your rule's text, or nothing when the payee alone can't tell the apartments apart.
-  const why = s && s.rule ? ` (rule "${s.rule.text}")` : '';
+  const why = s && s.rule ? ` (rule ${ruleLabel(s.rule, t.currency)})` : '';
   const suggestedParts = s && s.split && s.category ? makeParts(t.amount, s.category, s.split.firstAmount, s.split.category2) : null;
   const tag = unsorted
     ? (s ? `<span class="tag suggested">→ ${esc(aptLabel(s.apartment))}${
@@ -109,13 +113,16 @@ async function sortForm(t) {
   if (!t) return;
   const s = store.suggestionFor(t);
   const apartment = t.apartment || s?.apartment || 'a';
-  const category = t.category || s?.category || defaultCategory(t.amount);
+  const category = t.category || s?.category || store.payeeCategory(t) || defaultCategory(t.amount);
   // A split already made, or the one remembered for this payee/rule (e.g. the usual rent).
   const split = partsOf(t).length > 1
     ? { firstAmount: Math.abs(t.parts[0].amount), category2: t.parts[1].category }
     : (!t.apartment && s?.split) || null;
   // Remember by text when a rule already fits, or when the payee alone can't tell the apartments apart.
-  const byText = Boolean(s?.rule) || store.payeeIsMixed(t) || !t.party;
+  const mixed = store.payeeIsMixed(t);
+  const byText = Boolean(s?.rule) || mixed || !t.party;
+  // Amount range: the rule's own, else ±10 % around this line's amount.
+  const range = s?.rule && hasRange(s.rule) ? { min: s.rule.min, max: s.rule.max } : rangeAround(t.amount);
   const values = await openForm({
     title: t.party || 'Transaction',
     introHtml: `<p class="muted" style="margin-top:0" data-testid="rent-sort-info">${esc(dayLabel(t.date, dateKeyOf(new Date())))} · ${amountHtml(t.amount, t.currency)}
@@ -135,8 +142,16 @@ async function sortForm(t) {
       { name: 'remember', label: 'Remember for next time', type: 'choice', value: byText ? 'text' : 'payee',
         options: [{ value: 'payee', label: 'By payee' }, { value: 'text', label: 'By text' }, { value: 'no', label: 'No' }] },
       { name: 'ruleText', label: 'Lines containing this text', type: 'text',
-        value: s?.rule?.text || t.details || t.party || '', showIf: { field: 'remember', value: 'text' },
+        value: s?.rule?.text || (mixed && t.party) || t.details || t.party || '', showIf: { field: 'remember', value: 'text' },
         hint: 'Shorten it to the part only this apartment\'s lines have: a word like "Vabriku", a policy or reference number. Payee, description and reference are searched.' },
+      { name: 'ruleAmount', label: 'Also by amount?', type: 'choice', value: (s?.rule && hasRange(s.rule)) || mixed ? 'range' : 'any',
+        showIf: { field: 'remember', value: 'text' },
+        options: [{ value: 'any', label: 'Any amount' }, { value: 'range', label: 'Only between…' }] },
+      { name: 'ruleMin', label: 'From', type: 'money', value: range.min,
+        showIf: [{ field: 'remember', value: 'text' }, { field: 'ruleAmount', value: 'range' }] },
+      { name: 'ruleMax', label: 'To', type: 'money', value: range.max,
+        showIf: [{ field: 'remember', value: 'text' }, { field: 'ruleAmount', value: 'range' }],
+        hint: 'E.g. when one manager bills both flats: the smaller invoice is one flat, the bigger one the other.' },
     ],
     submitLabel: 'Save',
     deleteLabel: t.source === 'manual' || t.apartment ? 'Delete' : null,
@@ -145,6 +160,11 @@ async function sortForm(t) {
         return `The amount for the first part must be more than 0 and less than ${formatMoney(Math.abs(t.amount), t.currency)}.`;
       }
       if (v.remember === 'text' && !v.ruleText.trim()) return 'Please enter the text to look for, or choose "By payee".';
+      if (v.remember === 'text' && v.ruleAmount === 'range') {
+        if (v.ruleMin === null || v.ruleMax === null || v.ruleMin > v.ruleMax) return 'Please enter an amount range: From must not be more than To.';
+        const a = Math.abs(t.amount);
+        if (a < v.ruleMin || a > v.ruleMax) return `This line's amount (${formatMoney(a, t.currency)}) is outside the range.`;
+      }
       return null;
     },
   });
@@ -158,6 +178,7 @@ async function sortForm(t) {
     ? { firstAmount: values.firstAmount, category2: values.category2 } : null;
   store.sortTx(t.id, values.apartment, values.category, {
     remember: values.remember === 'no' ? false : values.remember, ruleText: values.ruleText, split: splitChoice,
+    ruleRange: values.ruleAmount === 'range' ? { min: values.ruleMin, max: values.ruleMax } : null,
   });
   toast(`${t.party || 'Line'}: ${aptLabel(values.apartment)}${values.apartment === 'none' ? '' : ` · ${catLabel(values.category)}`}`,
     { label: 'Undo', run: store.undo });
