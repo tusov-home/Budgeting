@@ -43,7 +43,7 @@ const EE = {
   amount: ['summa', 'amount'],
   currency: ['valuuta', 'currency'],
   dc: ['deebetkreedit', 'debitcredit'],
-  archive: ['arhiveerimistunnus', 'archiveid', 'archivingcode'],
+  archive: ['arhiveerimistunnus', 'archiveid', 'archivingcode', 'transferreference'],
   ref: ['viitenumber', 'referencenumber'],
 };
 const SE = {
@@ -93,6 +93,7 @@ const cell = (row, i) => (i === undefined ? '' : (row[i] || '').trim());
 
 function readEstonia(rows, c) {
   const transactions = [];
+  const seen = new Map(); // key → how often it appeared in this file
   let balance = null;
   let account = '';
   let currency = '';
@@ -113,9 +114,14 @@ function readEstonia(rows, c) {
     if (type === '86') {
       balance = { amount, date: d.date }; // closing balance ("Lõppsaldo")
     } else if (type === '20') {
-      const archive = cell(row, c.archive);
+      // The archive id / transfer reference is shared by lines that belong together
+      // (a payment and its fee, a loan's principal and interest), so the key also
+      // uses amount and details. Two identical lines on one day get #2, #3…
+      const base = transactionKey([account, cell(row, c.archive), d.date, String(amount), cell(row, c.party), cell(row, c.details)]);
+      const n = (seen.get(base) || 0) + 1;
+      seen.set(base, n);
       transactions.push({
-        key: archive ? `ee:${archive}` : `ee:${transactionKey([account, d.date, String(amount), cell(row, c.party), cell(row, c.details)])}`,
+        key: `ee:${base}${n > 1 ? `#${n}` : ''}`,
         date: d.date, amount, currency: cur,
         party: cell(row, c.party), details: cell(row, c.details), ref: cell(row, c.ref),
       });
@@ -126,6 +132,7 @@ function readEstonia(rows, c) {
 
 function readSweden(rows, c) {
   const transactions = [];
+  const seen = new Map();
   let latest = null; // row with the newest booking day → its booked balance is the current balance
   let account = '';
   let currency = '';
@@ -147,8 +154,11 @@ function readSweden(rows, c) {
     if (saldo !== null && (!latest || booked.date > latest.date || (booked.date === latest.date && rowNo < latest.rowNo))) {
       latest = { date: booked.date, amount: saldo, rowNo };
     }
+    const base = transactionKey([account, booked.date, date, String(amount), cell(row, c.details), cell(row, c.ref), String(saldo)]);
+    const n = (seen.get(base) || 0) + 1;
+    seen.set(base, n);
     transactions.push({
-      key: `se:${transactionKey([account, booked.date, date, String(amount), cell(row, c.details), cell(row, c.ref), String(saldo)])}`,
+      key: `se:${base}${n > 1 ? `#${n}` : ''}`,
       date, amount, currency: cur,
       party: cell(row, c.details), details: cell(row, c.ref), ref: '',
     });

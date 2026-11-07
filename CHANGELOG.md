@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-07 b
+- Rentals → Import Swedbank CSV: the file picker now also offers CSV files the phone labels as Excel files (how Android often saves bank downloads), so Swedbank statements are no longer greyed out.
+- Statements from the English internet bank ("Transfer reference" column) import fully: lines sharing a reference (payment + fee, loan principal + interest) and identical lines on the same day are all kept.
+- Suggestions also remember the exact description, so two loans from the same payee, and interest lines without a payee, are suggested to the right apartment next month.
+
 ## 2026-11-07 a
 - **New: Rentals**, a private tab only on devices set to Tõnis, for the Swedbank accounts and the two rental apartments.
   - **Sort**: import Swedbank Estonia (EUR) and Sweden (SEK) CSV statements, sort each line to an apartment (or both, or not rental) and a category. The choice is remembered per payee and suggested next time. Add lines by hand too.

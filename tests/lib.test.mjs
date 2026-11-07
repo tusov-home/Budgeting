@@ -395,7 +395,7 @@ test('close fingerprint changes when the result changes', () => {
 // ---------- rentals: Swedbank statements and calculations ----------
 import { parseSwedbank, decodeStatement } from '../js/lib/swedbank.js';
 import {
-  yearSummary, monthGrid, toEur, split, dueDates, paymentFor, upcomingPayments, addMonthsToDate, payeeKey,
+  yearSummary, monthGrid, toEur, split, dueDates, paymentFor, upcomingPayments, addMonthsToDate, payeeKey, detailsKey,
 } from '../js/lib/rentals.js';
 
 test('Swedbank Estonia: transactions with D/K signs and the closing balance', () => {
@@ -408,7 +408,8 @@ test('Swedbank Estonia: transactions with D/K signs and the closing balance', ()
   assert.deepEqual([rent.date, rent.amount, rent.party], ['2026-10-03', 65000, 'Mari Maasikas']);
   assert.equal(s.transactions[1].amount, -5500);
   assert.equal(s.transactions[4].party, 'Šokolaadi Remont OÜ');
-  assert.equal(s.transactions[0].key, 'ee:2026100300001111');
+  assert.ok(s.transactions[0].key.startsWith('ee:'));
+  assert.equal(new Set(s.transactions.map((t) => t.key)).size, 6);
   assert.deepEqual(s.balance, { amount: 258033, date: '2026-10-31' });
 });
 
@@ -433,6 +434,20 @@ test('Swedbank Sweden: signed SEK amounts, title line, newest booked balance', (
   // Same file twice → same keys (no double import)
   const again = parseSwedbank(readFileSync(new URL('./fixtures/swedbank-se.csv', import.meta.url), 'utf8'));
   assert.deepEqual(again.transactions.map((t) => t.key), s.transactions.map((t) => t.key));
+});
+
+test('Swedbank Estonia in English: shared transfer references and identical lines stay separate', () => {
+  const text = readFileSync(new URL('./fixtures/swedbank-ee-en-oct.csv', import.meta.url), 'utf8');
+  const s = parseSwedbank(text);
+  assert.equal(s.bank, 'ee');
+  assert.equal(s.transactions.length, 9);
+  // payment + fee share a reference; loan principal + interest share one; two identical fee lines on one day
+  assert.equal(new Set(s.transactions.map((t) => t.key)).size, 9);
+  assert.deepEqual(s.balance, { amount: 105968, date: '2026-10-31' });
+  // Same file again → the same keys, so nothing is imported twice
+  assert.deepEqual(parseSwedbank(text).transactions.map((t) => t.key), s.transactions.map((t) => t.key));
+  assert.equal(detailsKey('', 'Kogunenud intress: 11-000001-EL'), '|kogunenud intress 11 000001 el');
+  assert.notEqual(detailsKey('OMANIK', 'Laenu põhiosa: 11-000001-EL'), detailsKey('OMANIK', 'Laenu põhiosa: 22-000002-EL'));
 });
 
 test('a Revolut file is not taken for a Swedbank statement', () => {

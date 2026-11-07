@@ -209,6 +209,16 @@ export function upcomingPayments(bills, txs, paidMarks, today, { lookbackDays = 
   return out.sort((x, y) => (x.due < y.due ? -1 : x.due > y.due ? 1 : 0));
 }
 
+/**
+ * Key for remembering the choice for a payee + description, digits kept:
+ * "Kogunenud intress: 14-017712-EL" stays the same every month and tells two loans apart.
+ */
+export function detailsKey(party, details) {
+  const clean = (t) => (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const d = clean(details);
+  return d ? `${clean(party)}|${d}` : '';
+}
+
 /** Key for remembering the choice for a payee: lowercase letters only, digits dropped (invoice numbers). */
 export function payeeKey(party) {
   return (party || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, ' ').trim();

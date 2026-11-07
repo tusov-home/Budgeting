@@ -10,12 +10,13 @@
 //   racct      a bank account: { bank: 'ee'|'se', number, name, currency, balance, balanceDate }
 //   rtx        one transaction: { accountId, date, amount, currency, party, details, apartment, category, source }
 //              apartment null = not sorted yet (see lib/rentals.js)
-//   rpayee     remembered choice for a payee: { apartment, category }
+//   rpayee     remembered choice: { apartment, category }, per payee ("rpayee:<payee>") and
+//              per payee + exact description ("rpayee:d:<payee>|<description>"), which wins when both exist
 //   rbill      a recurring payment (see lib/rentals.js)
 //   rpaid      a bill's payment marked as paid by hand: { billId, due }
 
 import { mergeRecords } from '../lib/merge.js';
-import { payeeKey, defaultCategory } from '../lib/rentals.js';
+import { payeeKey, detailsKey, defaultCategory } from '../lib/rentals.js';
 import { transactionKey } from '../lib/revolut.js';
 
 const KEYS = {
@@ -188,11 +189,15 @@ export const getSorted = () => getTransactions().filter((t) => t.apartment);
 export const getBills = () => live('rbill').sort((a, b) => a.name.localeCompare(b.name));
 export const getPaidMarks = () => new Set(live('rpaid').map((r) => `${r.billId}|${r.due}`));
 
-/** Remembered choice for this payee: { apartment, category } or null. */
+/**
+ * Remembered choice for this line: { apartment, category } or null.
+ * The same description as before wins (two loans from one payee, interest lines without a payee);
+ * otherwise the payee's last choice.
+ */
 export function suggestionFor(tx) {
-  const key = payeeKey(tx.party);
-  if (!key) return null;
-  const r = get(`rpayee:${key}`);
+  const dKey = detailsKey(tx.party, tx.details);
+  const pKey = payeeKey(tx.party);
+  const r = (dKey && get(`rpayee:d:${dKey}`)) || (pKey && get(`rpayee:${pKey}`));
   if (!r) return null;
   // A remembered "rent" for money going out makes no sense: fall back to a cost.
   const category = r.apartment === 'none' ? null
@@ -246,9 +251,14 @@ export function importStatement(st) {
 export function sortTx(id, apartment, category, { remember = true } = {}) {
   const tx = get(id);
   if (!tx) return;
-  const changes = [{ id, apartment, category: apartment === 'none' ? null : category }];
-  const key = payeeKey(tx.party);
-  if (remember && key) changes.push({ id: `rpayee:${key}`, type: 'rpayee', apartment, category: apartment === 'none' ? null : category });
+  const cat = apartment === 'none' ? null : category;
+  const changes = [{ id, apartment, category: cat }];
+  if (remember) {
+    const pKey = payeeKey(tx.party);
+    const dKey = detailsKey(tx.party, tx.details);
+    if (pKey) changes.push({ id: `rpayee:${pKey}`, type: 'rpayee', apartment, category: cat });
+    if (dKey) changes.push({ id: `rpayee:d:${dKey}`, type: 'rpayee', apartment, category: cat });
+  }
   put(...changes);
 }
 

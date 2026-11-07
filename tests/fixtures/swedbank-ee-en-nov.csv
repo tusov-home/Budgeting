@@ -1,0 +1,8 @@
+"Client account";"Row type";"Date";"Beneficiary/Payer";"Details";"Amount";"Currency";"Debit/Credit";"Transfer reference";"Transaction type";"Reference number";"Document number";
+"EE009999000011112222";"10";"01.11.2026";"";"Opening balance";"1059,68";"EUR";"K";"";"AS";"";"";
+"EE009999000011112222";"20";"06.11.2026";"OMANIK";"Laenu põhiosa: 11-000001-EL";"100,40";"EUR";"D";"2026110600000009";"M";"";"M@";
+"EE009999000011112222";"20";"06.11.2026";"";"Kogunenud intress: 11-000001-EL";"79,60";"EUR";"D";"2026110600000009";"M";"";"M@";
+"EE009999000011112222";"20";"06.11.2026";"OMANIK";"Laenu põhiosa: 22-000002-EL";"90,30";"EUR";"D";"2026110600000009";"M";"";"M@";
+"EE009999000011112222";"20";"06.11.2026";"";"Kogunenud intress: 22-000002-EL";"69,70";"EUR";"D";"2026110600000009";"M";"";"M@";
+"EE009999000011112222";"20";"07.11.2026";"MARI MAASIKAS";"Novembri üür";"500,00";"EUR";"K";"2026110700000010";"MK";"";"";
+"EE009999000011112222";"86";"07.11.2026";"";"closing balance";"1219,68";"EUR";"K";"";"LS";"";"";
