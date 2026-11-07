@@ -396,7 +396,7 @@ test('close fingerprint changes when the result changes', () => {
 import { parseSwedbank, decodeStatement } from '../js/lib/swedbank.js';
 import {
   yearSummary, monthGrid, toEur, split, dueDates, paymentFor, upcomingPayments, addMonthsToDate, payeeKey, detailsKey,
-  ruleFor, matchText,
+  ruleFor, matchText, partsOf, makeParts,
 } from '../js/lib/rentals.js';
 
 test('Swedbank Estonia: transactions with D/K signs and the closing balance', () => {
@@ -524,4 +524,23 @@ test('rentals: rules match text in payee, description or reference; the longest 
   assert.equal(ruleFor({ party: 'KINDLUSTUS AS', details: 'Arve 1', ref: '90000111' }, rules).apartment, 'a');
   assert.equal(ruleFor({ party: 'Elisa', details: 'Bill 9000022', ref: '' }, rules), null);
   assert.equal(matchText('Kungla tn 12A KÜ'), 'kungla tn 12a ku');
+});
+
+test('rentals: one payment split into rent + utilities', () => {
+  assert.deepEqual(makeParts(57981, 'rent', 45000, 'utilities-in'), [
+    { category: 'rent', amount: 45000 }, { category: 'utilities-in', amount: 12981 },
+  ]);
+  assert.deepEqual(makeParts(-10000, 'repairs', 2500, 'cost-other'), [
+    { category: 'repairs', amount: -2500 }, { category: 'cost-other', amount: -7500 },
+  ]);
+  assert.equal(makeParts(40000, 'rent', 45000, 'utilities-in'), null); // rent part bigger than the payment
+  const t = { date: '2026-10-05', amount: 57981, currency: 'EUR', apartment: 'b', category: 'rent',
+    parts: makeParts(57981, 'rent', 45000, 'utilities-in') };
+  assert.equal(partsOf(t).length, 2);
+  assert.equal(partsOf({ ...t, parts: [{ category: 'rent', amount: 1 }, { category: 'x', amount: 1 }] }).length, 1); // doesn't add up → ignored
+  const y = yearSummary([t], 2026, {});
+  assert.equal(y.b.byCategory.rent, 45000);
+  assert.equal(y.b.byCategory['utilities-in'], 12981);
+  assert.equal(y.b.income, 57981);
+  assert.equal(monthGrid([t], 2026, {})[9].b.rent, 45000); // the month grid shows the rent part only
 });

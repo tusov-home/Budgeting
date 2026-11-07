@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-07 e
+- Rentals → Sort: **split one payment into two parts**, e.g. rent + utilities from the same tenant. Choose *Split: Yes*, enter the rent; the rest goes to the second category (new: *Utilities paid by tenant*, "Umlagen").
+- The split is remembered with the payee or rule: next month the same rent amount is suggested with the new rest, and ✓ accepts it in one tap.
+- Year and month-by-month count each part in its own category (the rent column shows only the rent part).
+- Forms keep open with a message when something doesn't fit (e.g. a rent part larger than the payment).
+
 ## 2026-11-07 d
 - Rentals → Sort: **remember by text**. When sorting a line, choose *Remember: By text* and keep only the part that tells the apartments apart (a word like "Vabriku", a policy or reference number). Lines whose payee, description or reference number contain it are suggested to that apartment. The longest matching text wins; rules come before the payee memory.
 - Reference numbers from the statement are now kept and shown, so rules can use them (also added to lines imported earlier when the statement is imported again).

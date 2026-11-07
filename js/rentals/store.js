@@ -8,18 +8,21 @@
 // Records (all have id, type, updatedAt, deleted):
 //   rsettings  id 'rsettings': { apartments: { a, b }, share (your %), rates: { year: SEK per EUR } }
 //   racct      a bank account: { bank: 'ee'|'se', number, name, currency, balance, balanceDate }
-//   rtx        one transaction: { accountId, date, amount, currency, party, details, apartment, category, source }
+//   rtx        one transaction: { accountId, date, amount, currency, party, details, ref, apartment, category, source,
+//              parts? } — parts: [{ category, amount }] when one payment is split (e.g. rent + utilities)
 //              apartment null = not sorted yet (see lib/rentals.js)
 //   rpayee     remembered choice: { apartment, category }, per payee ("rpayee:<payee>") and
 //              per payee + exact description ("rpayee:d:<payee>|<description>"), which wins when both exist.
 //              A payee sorted to different apartments gets mixed: true and suggests nothing on its own.
 //   rrule      your own rule: lines whose payee, description or reference contain `text`
 //              go to { apartment, category }. Rules win over everything else.
+//   Remembered choices and rules can carry split: { firstAmount, category2 }: the first part
+//   (e.g. the usual rent) goes to `category`, the rest to category2.
 //   rbill      a recurring payment (see lib/rentals.js)
 //   rpaid      a bill's payment marked as paid by hand: { billId, due }
 
 import { mergeRecords } from '../lib/merge.js';
-import { payeeKey, detailsKey, defaultCategory, ruleFor, matchText } from '../lib/rentals.js';
+import { payeeKey, detailsKey, defaultCategory, ruleFor, matchText, makeParts } from '../lib/rentals.js';
 import { transactionKey } from '../lib/revolut.js';
 
 const KEYS = {
@@ -219,7 +222,7 @@ export function suggestionFor(tx) {
   // A remembered "rent" for money going out makes no sense: fall back to a cost.
   const category = r.apartment === 'none' ? null
     : (tx.amount < 0 && r.category === 'rent') ? defaultCategory(tx.amount) : r.category;
-  return { apartment: r.apartment, category, source, rule: rule || null };
+  return { apartment: r.apartment, category, source, rule: rule || null, split: r.apartment === 'none' ? null : r.split || null };
 }
 
 /** Lines of this payee were sorted to more than one apartment (so the payee alone says nothing). */
@@ -279,24 +282,27 @@ export function importStatement(st) {
  *   remember: 'payee' (payee + exact description) | 'text' (a rule for ruleText) | false
  * The payee memory notices when one payee goes to different apartments (mixed).
  */
-export function sortTx(id, apartment, category, { remember = 'payee', ruleText = '' } = {}) {
+export function sortTx(id, apartment, category, { remember = 'payee', ruleText = '', split = null } = {}) {
   const tx = get(id);
   if (!tx) return;
   const cat = apartment === 'none' ? null : category;
-  const changes = [{ id, apartment, category: cat }];
+  // split: { firstAmount, category2 } → two parts; remembered too, so next month suggests the same split.
+  const parts = cat && split ? makeParts(tx.amount, cat, split.firstAmount, split.category2) : null;
+  const keep = parts ? split : null;
+  const changes = [{ id, apartment, category: cat, parts }];
   if (remember) {
     const pKey = payeeKey(tx.party);
     const dKey = detailsKey(tx.party, tx.details);
     if (pKey) {
       const old = get(`rpayee:${pKey}`);
       const mixed = Boolean(old && (old.mixed || (old.apartment !== apartment && apartment !== 'none' && old.apartment !== 'none')));
-      changes.push({ id: `rpayee:${pKey}`, type: 'rpayee', apartment, category: cat, mixed });
+      changes.push({ id: `rpayee:${pKey}`, type: 'rpayee', apartment, category: cat, mixed, split: keep });
     }
-    if (dKey) changes.push({ id: `rpayee:d:${dKey}`, type: 'rpayee', apartment, category: cat });
+    if (dKey) changes.push({ id: `rpayee:d:${dKey}`, type: 'rpayee', apartment, category: cat, split: keep });
   }
   const text = matchText(ruleText);
   if (remember === 'text' && text) {
-    changes.push({ id: `rrule:${text}`, type: 'rrule', text: ruleText.trim(), apartment, category: cat });
+    changes.push({ id: `rrule:${text}`, type: 'rrule', text: ruleText.trim(), apartment, category: cat, split: keep });
   }
   put(...changes);
 }
@@ -306,10 +312,25 @@ export function acceptSuggestions() {
   const changes = [];
   for (const tx of getUnsorted()) {
     const s = suggestionFor(tx);
-    if (s) changes.push({ id: tx.id, apartment: s.apartment, category: s.category });
+    if (s) changes.push(suggestedChange(tx, s));
   }
   if (changes.length) put(...changes);
   return changes.length;
+}
+
+/** The change that applies a suggestion, with its split when the amount allows it. */
+function suggestedChange(tx, s) {
+  const parts = s.split && s.category ? makeParts(tx.amount, s.category, s.split.firstAmount, s.split.category2) : null;
+  return { id: tx.id, apartment: s.apartment, category: s.category, parts };
+}
+
+/** Accept the suggestion for one line (the ✓ button). */
+export function acceptSuggestion(id) {
+  const tx = get(id);
+  const s = tx && suggestionFor(tx);
+  if (!s) return null;
+  put(suggestedChange(tx, s));
+  return s;
 }
 
 /** A transaction typed in by hand (cash, or an account without CSV export). */

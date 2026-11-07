@@ -2,7 +2,8 @@
 
 import * as store from '../../rentals/store.js';
 import { parseSwedbank, decodeStatement } from '../../lib/swedbank.js';
-import { defaultCategory } from '../../lib/rentals.js';
+import { defaultCategory, partsOf, makeParts } from '../../lib/rentals.js';
+import { formatMoney } from '../../lib/money.js';
 import { dateKeyOf } from '../../lib/months.js';
 import { esc, toast } from '../dom.js';
 import { openForm } from '../form.js';
@@ -35,14 +36,20 @@ export function html(todayKey) {
     </section>` : ''}`;
 }
 
+/** "Rent 450,00 € + Utilities paid by tenant 129,81 €" */
+const partsText = (parts, currency) => parts.map((p) => `${catLabel(p.category)} ${formatMoney(Math.abs(p.amount), currency)}`).join(' + ');
+
 function row(t, todayKey, unsorted) {
   const s = unsorted ? store.suggestionFor(t) : null;
   // Why this suggestion: your rule's text, or nothing when the payee alone can't tell the apartments apart.
   const why = s && s.rule ? ` (rule "${s.rule.text}")` : '';
+  const suggestedParts = s && s.split && s.category ? makeParts(t.amount, s.category, s.split.firstAmount, s.split.category2) : null;
   const tag = unsorted
-    ? (s ? `<span class="tag suggested">→ ${esc(aptLabel(s.apartment))}${s.category ? ` · ${esc(catLabel(s.category))}` : ''}${esc(why)}</span>`
+    ? (s ? `<span class="tag suggested">→ ${esc(aptLabel(s.apartment))}${
+      suggestedParts ? ` · ${esc(partsText(suggestedParts, t.currency))}` : s.category ? ` · ${esc(catLabel(s.category))}` : ''}${esc(why)}</span>`
       : store.payeeIsMixed(t) ? '<span class="tag due-soon">Both apartments use this payee: pick one, or add a rule</span>' : '')
-    : `<span class="tag">${esc(aptLabel(t.apartment))}${t.category ? ` · ${esc(catLabel(t.category))}` : ''}</span>`;
+    : `<span class="tag">${esc(aptLabel(t.apartment))}${
+      partsOf(t).length > 1 ? ` · ${esc(partsText(partsOf(t), t.currency))}` : t.category ? ` · ${esc(catLabel(t.category))}` : ''}</span>`;
   return `<li class="rent-row" data-testid="rent-row">
     <button class="row-btn" data-tx="${esc(t.id)}">
       <span class="rent-main">
@@ -70,10 +77,9 @@ export function bind(main) {
   });
   main.querySelectorAll('[data-accept]').forEach((b) => b.addEventListener('click', () => {
     const t = store.get(b.dataset.accept);
-    const s = t && store.suggestionFor(t);
+    const s = t && store.acceptSuggestion(t.id);
     if (!s) return;
-    store.sortTx(t.id, s.apartment, s.category, { remember: false });
-    toast(`${t.party}: ${aptLabel(s.apartment)}`, { label: 'Undo', run: store.undo });
+    toast(`${t.party || t.details}: ${aptLabel(s.apartment)}`, { label: 'Undo', run: store.undo });
   }));
   main.querySelectorAll('[data-tx]').forEach((b) => b.addEventListener('click', () => sortForm(store.get(b.dataset.tx))));
 }
@@ -104,6 +110,10 @@ async function sortForm(t) {
   const s = store.suggestionFor(t);
   const apartment = t.apartment || s?.apartment || 'a';
   const category = t.category || s?.category || defaultCategory(t.amount);
+  // A split already made, or the one remembered for this payee/rule (e.g. the usual rent).
+  const split = partsOf(t).length > 1
+    ? { firstAmount: Math.abs(t.parts[0].amount), category2: t.parts[1].category }
+    : (!t.apartment && s?.split) || null;
   // Remember by text when a rule already fits, or when the payee alone can't tell the apartments apart.
   const byText = Boolean(s?.rule) || store.payeeIsMixed(t) || !t.party;
   const values = await openForm({
@@ -114,6 +124,14 @@ async function sortForm(t) {
       { name: 'apartment', label: 'Apartment', type: 'choice', value: apartment, options: aptOptions(true) },
       { name: 'category', label: 'Category', type: 'select', value: category, options: categoryOptions(t.amount),
         hint: 'Not needed for "Not rental".' },
+      { name: 'split', label: 'Split into two parts?', type: 'choice', value: split ? 'yes' : 'no',
+        options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes, e.g. rent + utilities' }] },
+      { name: 'firstAmount', label: 'Amount for the category above', type: 'money', value: split ? split.firstAmount : null,
+        showIf: { field: 'split', value: 'yes' },
+        hint: `For example the rent. The rest of ${formatMoney(Math.abs(t.amount), t.currency)} goes to the category below.` },
+      { name: 'category2', label: 'Category for the rest', type: 'select',
+        value: split ? split.category2 : (t.amount >= 0 ? 'utilities-in' : 'cost-other'),
+        options: categoryOptions(t.amount), showIf: { field: 'split', value: 'yes' } },
       { name: 'remember', label: 'Remember for next time', type: 'choice', value: byText ? 'text' : 'payee',
         options: [{ value: 'payee', label: 'By payee' }, { value: 'text', label: 'By text' }, { value: 'no', label: 'No' }] },
       { name: 'ruleText', label: 'Lines containing this text', type: 'text',
@@ -122,6 +140,13 @@ async function sortForm(t) {
     ],
     submitLabel: 'Save',
     deleteLabel: t.source === 'manual' || t.apartment ? 'Delete' : null,
+    validate: (v) => {
+      if (v.split === 'yes' && v.apartment !== 'none' && !makeParts(t.amount, v.category, v.firstAmount, v.category2)) {
+        return `The amount for the first part must be more than 0 and less than ${formatMoney(Math.abs(t.amount), t.currency)}.`;
+      }
+      if (v.remember === 'text' && !v.ruleText.trim()) return 'Please enter the text to look for, or choose "By payee".';
+      return null;
+    },
   });
   if (!values) return;
   if (values.__delete) {
@@ -129,12 +154,10 @@ async function sortForm(t) {
     toast('Deleted', { label: 'Undo', run: store.undo });
     return;
   }
-  if (values.remember === 'text' && !values.ruleText.trim()) {
-    toast('Please enter the text to look for, or choose "By payee"');
-    return;
-  }
+  const splitChoice = values.split === 'yes' && values.apartment !== 'none'
+    ? { firstAmount: values.firstAmount, category2: values.category2 } : null;
   store.sortTx(t.id, values.apartment, values.category, {
-    remember: values.remember === 'no' ? false : values.remember, ruleText: values.ruleText,
+    remember: values.remember === 'no' ? false : values.remember, ruleText: values.ruleText, split: splitChoice,
   });
   toast(`${t.party || 'Line'}: ${aptLabel(values.apartment)}${values.apartment === 'none' ? '' : ` · ${catLabel(values.category)}`}`,
     { label: 'Undo', run: store.undo });

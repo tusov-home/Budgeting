@@ -11,6 +11,7 @@
  */
 export const CATEGORIES = [
   { id: 'rent', label: 'Rent', de: 'Mieteinnahmen', kind: 'income' },
+  { id: 'utilities-in', label: 'Utilities paid by tenant', de: 'Umlagen', kind: 'income' },
   { id: 'income-other', label: 'Other income (refunds, deposits kept)', de: 'sonstige Einnahmen', kind: 'income' },
   { id: 'management', label: 'Management fee', de: 'Verwaltungskosten', kind: 'cost' },
   { id: 'association', label: 'Building association fee', de: 'Hausgeld', kind: 'cost' },
@@ -27,6 +28,31 @@ export const CATEGORIES = [
 ];
 
 export const categoryById = (id) => CATEGORIES.find((c) => c.id === id) || null;
+
+/**
+ * The parts of a transaction: [{ category, amount }]. Normally one part; a split line
+ * (e.g. rent + utilities in one payment) has t.parts, which add up to t.amount.
+ */
+export function partsOf(t) {
+  if (Array.isArray(t.parts) && t.parts.length > 1 && t.parts.reduce((sum, p) => sum + p.amount, 0) === t.amount) {
+    return t.parts;
+  }
+  return [{ category: t.category, amount: t.amount }];
+}
+
+/**
+ * Split an amount in two: the first part as given (positive, e.g. the rent), the rest to category2.
+ * Returns the parts with the sign of the total, or null when the first part isn't smaller than the total.
+ */
+export function makeParts(total, firstCategory, firstAmount, category2) {
+  const abs = Math.abs(total);
+  if (!(firstAmount > 0) || firstAmount >= abs) return null;
+  const sign = total < 0 ? -1 : 1;
+  return [
+    { category: firstCategory, amount: sign * firstAmount },
+    { category: category2, amount: sign * (abs - firstAmount) },
+  ];
+}
 
 /** Default category for an amount: money in → rent, money out → other cost. */
 export const defaultCategory = (amount) => (amount >= 0 ? 'rent' : 'cost-other');
@@ -68,22 +94,24 @@ export function yearSummary(txs, year, rates = {}) {
   const out = { a: empty(), b: empty(), total: empty(), unconverted: 0 };
   for (const t of txs) {
     if (!isRental(t) || !t.date.startsWith(String(year))) continue;
-    const eur = toEur(t.amount, t.currency, year, rates);
-    if (eur === null) {
+    if (toEur(t.amount, t.currency, year, rates) === null) {
       out.unconverted++;
       continue;
     }
-    const cat = categoryById(t.category) || categoryById(defaultCategory(t.amount));
-    const parts = split(eur, t.apartment);
-    for (const key of ['a', 'b']) {
-      const v = parts[key];
-      if (!v) continue;
-      for (const s of [out[key], out.total]) {
-        s.byCategory[cat.id] = (s.byCategory[cat.id] || 0) + v;
-        if (cat.kind === 'income') s.income += v;
-        else if (cat.kind === 'cost') s.costs += v;
-        else if (cat.kind === 'tax') s.tax += v;
-        else s.other += v;
+    for (const part of partsOf(t)) {
+      const eur = toEur(part.amount, t.currency, year, rates);
+      const cat = categoryById(part.category) || categoryById(defaultCategory(part.amount));
+      const shares = split(eur, t.apartment);
+      for (const key of ['a', 'b']) {
+        const v = shares[key];
+        if (!v) continue;
+        for (const s of [out[key], out.total]) {
+          s.byCategory[cat.id] = (s.byCategory[cat.id] || 0) + v;
+          if (cat.kind === 'income') s.income += v;
+          else if (cat.kind === 'cost') s.costs += v;
+          else if (cat.kind === 'tax') s.tax += v;
+          else s.other += v;
+        }
       }
     }
   }
@@ -103,14 +131,15 @@ export function monthGrid(txs, year, rates = {}) {
   }));
   for (const t of txs) {
     if (!isRental(t) || !t.date.startsWith(String(year))) continue;
-    const eur = toEur(t.amount, t.currency, year, rates);
-    if (eur === null) continue;
-    const cat = categoryById(t.category) || categoryById(defaultCategory(t.amount));
+    if (toEur(t.amount, t.currency, year, rates) === null) continue;
     const m = months[Number(t.date.slice(5, 7)) - 1];
-    const parts = split(eur, t.apartment);
-    for (const key of ['a', 'b']) {
-      if (cat.id === 'rent') m[key].rent += parts[key];
-      else if (cat.kind === 'cost') m[key].costs += parts[key];
+    for (const part of partsOf(t)) {
+      const cat = categoryById(part.category) || categoryById(defaultCategory(part.amount));
+      const shares = split(toEur(part.amount, t.currency, year, rates), t.apartment);
+      for (const key of ['a', 'b']) {
+        if (cat.id === 'rent') m[key].rent += shares[key];
+        else if (cat.kind === 'cost') m[key].costs += shares[key];
+      }
     }
   }
   return months;
@@ -165,7 +194,7 @@ export function paymentFor(bill, due, txs) {
   const text = (bill.match || '').trim().toLowerCase();
   let best = null;
   for (const t of txs) {
-    if (t.amount >= 0 || t.category !== bill.category) continue;
+    if (t.amount >= 0 || !partsOf(t).some((p) => p.category === bill.category)) continue;
     if (!(t.apartment === bill.apartment || t.apartment === 'both' || bill.apartment === 'both')) continue;
     if (bill.currency && t.currency !== bill.currency) continue;
     if (text && !`${t.party} ${t.details}`.toLowerCase().includes(text)) continue;

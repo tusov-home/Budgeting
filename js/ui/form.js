@@ -21,7 +21,8 @@ export function isFormOpen() {
 
 // submitPrimary: false when another button in extraHtml is the main (green) one.
 // introHtml goes above the fields, extraHtml below them.
-export function openForm({ title, fields, submitLabel = 'Save', deleteLabel = null, extraHtml = '', introHtml = '', submitPrimary = true }) {
+// validate(values): optional check before closing; return a message to keep the form open and show it.
+export function openForm({ title, fields, submitLabel = 'Save', deleteLabel = null, extraHtml = '', introHtml = '', submitPrimary = true, validate = null }) {
   const dlg = dialog();
   dlg.innerHTML = `
     <form method="dialog" novalidate>
@@ -61,8 +62,9 @@ export function openForm({ title, fields, submitLabel = 'Save', deleteLabel = nu
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const { values, error } = readValues(form, fields);
-      if (error) {
-        errorEl.textContent = error;
+      const problem = error || (validate && validate(values));
+      if (problem) {
+        errorEl.textContent = problem;
         return;
       }
       finish(values);
