@@ -121,7 +121,7 @@ changed the same record, the newer change wins.
 **Rentals** (Tõnis only) has its own records, stored as `hr.*` in the browser and synced to a separate private Sheet:
 `rsettings` (apartment names, your share, SEK per EUR per year), `racct` (account with its latest balance from a statement),
 `rtx` (one transaction; `apartment` null until sorted, then `a`, `b`, `both` or `none`, plus a `category`;
-a split payment also has `parts: [{ category, amount }]`, e.g. rent + utilities, remembered as `split: { firstAmount, category2 }` with the payee or rule),
+`forMonth` (YYYY-MM) when a payment is for another month, used by Month by month; a split payment also has `parts: [{ category, amount }]`, e.g. rent + utilities, remembered as `split: { firstAmount, category2 }` with the payee or rule),
 `rpayee` (remembered choice per payee, and per payee + exact description; a payee used for both apartments is marked `mixed` and not guessed),
 `rrule` (your rule: lines whose payee, description or reference number contain `text`, optionally only with an amount between `min` and `max`, go to an apartment and category; a rule with an amount range wins, then the longest text),
 `rbill` (recurring payment), `rpaid` (a payment marked as paid by hand).

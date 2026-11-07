@@ -79,7 +79,9 @@ function monthsCard(todayKey, year, yearNav) {
     const missing = month < thisMonth && dataFrom && month >= dataFrom;
     return `<td class="num ${missing ? 'warn-text' : 'muted'}">${missing ? 'missing' : '—'}</td>`;
   };
-  const rows = grid.filter((m) => m.month <= thisMonth || String(year) !== todayKey.slice(0, 4));
+  // Up to this month, plus coming months that already have money (rent paid in advance).
+  const rows = grid.filter((m) => m.month <= thisMonth || String(year) !== todayKey.slice(0, 4)
+    || m.a.rent || m.b.rent || m.a.costs || m.b.costs);
   return `<section class="card" data-testid="rent-months">
     <div class="card-head"><h2>Month by month</h2>${yearNav}</div>
     ${rows.length ? `<div class="table-wrap"><table class="grid-table">

@@ -143,6 +143,9 @@ function fieldInner(f) {
     case 'date':
       return `<div class="field"><label for="${id}">${esc(f.label)}</label>
         <input id="${id}" name="${f.name}" type="date" value="${esc(f.value || '')}" ${auto}>${hint}</div>`;
+    case 'month':
+      return `<div class="field"><label for="${id}">${esc(f.label)}</label>
+        <input id="${id}" name="${f.name}" type="month" value="${esc(f.value || '')}" ${auto}>${hint}</div>`;
     case 'number':
       return `<div class="field"><label for="${id}">${esc(f.label)}</label>
         <input id="${id}" name="${f.name}" type="number" inputmode="numeric" min="${f.min ?? ''}" max="${f.max ?? ''}"

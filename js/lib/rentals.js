@@ -119,9 +119,13 @@ export function yearSummary(txs, year, rates = {}) {
   return out;
 }
 
+/** The month a line counts for in Month by month: its own "for month" (rent paid early or late), else the payment month. */
+export const monthOf = (t) => t.forMonth || t.date.slice(0, 7);
+
 /**
  * Month by month for one year: [{ month: 'YYYY-MM', a: { rent, costs }, b: { rent, costs } }] × 12,
  * in euro cents. rent = rent received; costs = all costs (negative). SEK without a rate is left out.
+ * Lines count in the month they are for (monthOf); SEK uses the rate of the year it was paid.
  */
 export function monthGrid(txs, year, rates = {}) {
   const months = Array.from({ length: 12 }, (_, i) => ({
@@ -130,12 +134,14 @@ export function monthGrid(txs, year, rates = {}) {
     b: { rent: 0, costs: 0 },
   }));
   for (const t of txs) {
-    if (!isRental(t) || !t.date.startsWith(String(year))) continue;
-    if (toEur(t.amount, t.currency, year, rates) === null) continue;
-    const m = months[Number(t.date.slice(5, 7)) - 1];
+    const forMonth = monthOf(t);
+    if (!isRental(t) || !forMonth.startsWith(String(year))) continue;
+    const paidYear = t.date.slice(0, 4);
+    if (toEur(t.amount, t.currency, paidYear, rates) === null) continue;
+    const m = months[Number(forMonth.slice(5, 7)) - 1];
     for (const part of partsOf(t)) {
       const cat = categoryById(part.category) || categoryById(defaultCategory(part.amount));
-      const shares = split(toEur(part.amount, t.currency, year, rates), t.apartment);
+      const shares = split(toEur(part.amount, t.currency, paidYear, rates), t.apartment);
       for (const key of ['a', 'b']) {
         if (cat.id === 'rent') m[key].rent += shares[key];
         else if (cat.kind === 'cost') m[key].costs += shares[key];

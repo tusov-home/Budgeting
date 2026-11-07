@@ -4,7 +4,7 @@ import * as store from '../../rentals/store.js';
 import { parseSwedbank, decodeStatement } from '../../lib/swedbank.js';
 import { defaultCategory, partsOf, makeParts, hasRange, rangeAround } from '../../lib/rentals.js';
 import { formatMoney } from '../../lib/money.js';
-import { dateKeyOf } from '../../lib/months.js';
+import { dateKeyOf, monthLabel } from '../../lib/months.js';
 import { esc, toast } from '../dom.js';
 import { openForm } from '../form.js';
 import { aptLabel, aptOptions, categoryOptions, catLabel, amountHtml, bankTag, dayLabel } from './common.js';
@@ -54,7 +54,8 @@ export function row(t, todayKey, unsorted) {
       suggestedParts ? ` · ${esc(partsText(suggestedParts, t.currency))}` : s.category ? ` · ${esc(catLabel(s.category))}` : ''}${esc(why)}</span>`
       : store.payeeIsMixed(t) ? '<span class="tag due-soon">Both apartments use this payee: pick one, or add a rule</span>' : '')
     : `<span class="tag">${esc(aptLabel(t.apartment))}${
-      partsOf(t).length > 1 ? ` · ${esc(partsText(partsOf(t), t.currency))}` : t.category ? ` · ${esc(catLabel(t.category))}` : ''}</span>`;
+      partsOf(t).length > 1 ? ` · ${esc(partsText(partsOf(t), t.currency))}` : t.category ? ` · ${esc(catLabel(t.category))}` : ''}${
+      t.forMonth ? ` · for ${esc(monthLabel(t.forMonth))}` : ''}</span>`;
   return `<li class="rent-row" data-testid="rent-row">
     <button class="row-btn" data-tx="${esc(t.id)}">
       <span class="rent-main">
@@ -140,6 +141,8 @@ export async function sortForm(t) {
       { name: 'category2', label: 'Category for the rest', type: 'select',
         value: split ? split.category2 : (t.amount >= 0 ? 'utilities-in' : 'cost-other'),
         options: categoryOptions(t.amount), showIf: { field: 'split', value: 'yes' } },
+      { name: 'forMonth', label: 'For month', type: 'month', value: t.forMonth || t.date.slice(0, 7),
+        hint: 'For rent paid early or late: the month it is for. Used in Month by month; the Year table counts by the date paid.' },
       { name: 'remember', label: 'Remember for next time', type: 'choice', value: byText ? 'text' : 'payee',
         options: [{ value: 'payee', label: 'By payee' }, { value: 'text', label: 'By text' }, { value: 'no', label: 'No' }] },
       { name: 'ruleText', label: 'Lines containing this text', type: 'text',
@@ -179,6 +182,7 @@ export async function sortForm(t) {
     ? { firstAmount: values.firstAmount, category2: values.category2 } : null;
   store.sortTx(t.id, values.apartment, values.category, {
     remember: values.remember === 'no' ? false : values.remember, ruleText: values.ruleText, split: splitChoice,
+    forMonth: values.forMonth || null,
     ruleRange: values.ruleAmount === 'range' ? { min: values.ruleMin, max: values.ruleMax } : null,
   });
   toast(`${t.party || 'Line'}: ${aptLabel(values.apartment)}${values.apartment === 'none' ? '' : ` · ${catLabel(values.category)}`}`,

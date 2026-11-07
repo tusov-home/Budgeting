@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-07 h
+- Rentals → each line has **For month**: the month a payment is for (e.g. May's rent paid at the end of April). Month by month shows it under that month; coming months that already have rent appear too. The Year table still counts by the date paid.
+- Sorted lines show "for May 2026" when their month differs from the payment date.
+
 ## 2026-11-07 g
 - Rentals → **Find**: search all sorted lines by payee, description, reference number or amount, and filter by apartment, category and year. Shows how many lines and their total, counted like the Year table. Tap a line to fix it.
 - Rentals → Year: tap a category or any number to open Find with exactly the lines behind it.

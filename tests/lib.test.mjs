@@ -396,7 +396,7 @@ test('close fingerprint changes when the result changes', () => {
 import { parseSwedbank, decodeStatement } from '../js/lib/swedbank.js';
 import {
   yearSummary, monthGrid, toEur, split, dueDates, paymentFor, upcomingPayments, addMonthsToDate, payeeKey, detailsKey,
-  ruleFor, matchText, partsOf, makeParts, rangeAround,
+  ruleFor, matchText, partsOf, makeParts, rangeAround, monthOf,
 } from '../js/lib/rentals.js';
 
 test('Swedbank Estonia: transactions with D/K signs and the closing balance', () => {
@@ -558,4 +558,19 @@ test('rentals: rules with an amount range (one manager, two flats)', () => {
   assert.equal(ruleFor(line(-12000), rules.slice(0, 2)), null);
   assert.deepEqual(rangeAround(-5022), { min: 4500, max: 5600 });
   assert.deepEqual(rangeAround(8928), { min: 8000, max: 9900 });
+});
+
+test('rentals: rent paid early counts in the month it is for (Month by month), the year by payment date', () => {
+  const april = { date: '2026-04-28', amount: 45000, currency: 'EUR', apartment: 'a', category: 'rent' };
+  const may = { ...april, forMonth: '2026-05' };
+  const grid = monthGrid([april, may], 2026, {});
+  assert.equal(grid[3].a.rent, 45000);
+  assert.equal(grid[4].a.rent, 45000);
+  assert.equal(yearSummary([april, may], 2026, {}).a.income, 90000);
+  // December's rent paid for January next year: in next year's grid, this year's Year table.
+  const jan = { date: '2026-12-29', amount: 45000, currency: 'SEK', apartment: 'b', category: 'rent', forMonth: '2027-01' };
+  assert.equal(monthOf(jan), '2027-01');
+  assert.equal(monthGrid([jan], 2027, { 2026: 10 })[0].b.rent, 4500); // SEK rate of the year it was paid
+  assert.equal(monthGrid([jan], 2026, { 2026: 10 })[11].b.rent, 0);
+  assert.equal(yearSummary([jan], 2026, { 2026: 10 }).b.income, 4500);
 });

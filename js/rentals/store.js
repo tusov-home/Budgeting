@@ -9,7 +9,8 @@
 //   rsettings  id 'rsettings': { apartments: { a, b }, share (your %), rates: { year: SEK per EUR } }
 //   racct      a bank account: { bank: 'ee'|'se', number, name, currency, balance, balanceDate }
 //   rtx        one transaction: { accountId, date, amount, currency, party, details, ref, apartment, category, source,
-//              parts? } — parts: [{ category, amount }] when one payment is split (e.g. rent + utilities)
+//              parts?, forMonth? } — parts: [{ category, amount }] when one payment is split (e.g. rent + utilities);
+//              forMonth: 'YYYY-MM' the line is for in Month by month (rent paid early or late)
 //              apartment null = not sorted yet (see lib/rentals.js)
 //   rpayee     remembered choice: { apartment, category }, per payee ("rpayee:<payee>") and
 //              per payee + exact description ("rpayee:d:<payee>|<description>"), which wins when both exist.
@@ -289,14 +290,17 @@ export function importStatement(st) {
  *   remember: 'payee' (payee + exact description) | 'text' (a rule for ruleText) | false
  * The payee memory notices when one payee goes to different apartments (mixed).
  */
-export function sortTx(id, apartment, category, { remember = 'payee', ruleText = '', ruleRange = null, split = null } = {}) {
+export function sortTx(id, apartment, category, { remember = 'payee', ruleText = '', ruleRange = null, split = null, forMonth = undefined } = {}) {
   const tx = get(id);
   if (!tx) return;
   const cat = apartment === 'none' ? null : category;
   // split: { firstAmount, category2 } → two parts; remembered too, so next month suggests the same split.
   const parts = cat && split ? makeParts(tx.amount, cat, split.firstAmount, split.category2) : null;
   const keep = parts ? split : null;
-  const changes = [{ id, apartment, category: cat, parts }];
+  const change = { id, apartment, category: cat, parts };
+  // forMonth: kept only when it differs from the payment month (undefined = leave as it is).
+  if (forMonth !== undefined) change.forMonth = forMonth && forMonth !== tx.date.slice(0, 7) ? forMonth : null;
+  const changes = [change];
   if (remember) {
     const pKey = payeeKey(tx.party);
     const dKey = detailsKey(tx.party, tx.details);

@@ -412,6 +412,30 @@ def run(p):
     t.get_by_test_id("rent-tab-setup").click()
     check("Setup shows the rules with their ranges", "45,00–56,00 €" in text(t.get_by_test_id("rent-rules")))
 
+    print("Rent paid early: For month")
+    t.get_by_test_id("rent-tab-find").click()
+    if t.get_by_role("button", name="Clear filters").count():
+        t.get_by_role("button", name="Clear filters").click()
+    t.locator("#find-q").fill("Jaan Jõgi")
+    t.get_by_test_id("rent-find").locator("[data-tx]").first.click()
+    dlg = t.locator("#form-dialog")
+    check("the form has For month, starting at the payment month", dlg.locator('[name="forMonth"]').input_value() == "2026-10")
+    dlg.locator('[name="forMonth"]').fill("2026-11")
+    dlg.locator(".seg label", has_text=re.compile("^No$")).last.click()  # don't remember
+    dlg.get_by_role("button", name="Save").click()
+    t.wait_for_timeout(150)
+    check("the line says which month it is for", "for November 2026" in text(t.get_by_test_id("rent-find")))
+    t.get_by_test_id("rent-tab-overview").click()
+    while t.get_by_test_id("rent-year-label").inner_text() != "2026":
+        t.get_by_role("button", name="Next year").click()
+    months = t.get_by_test_id("rent-months")
+    oct_row = text(months.locator("tr", has_text="Oct"))
+    nov_row = text(months.locator("tr", has_text="Nov"))
+    check(f"Month by month: Flat B's rent moved from October to November ({oct_row} | {nov_row})",
+          "✓ 450 €" in oct_row and "✓ 1.170 €" in nov_row)  # 450 € split rent each month; 720 € now in November
+    t.get_by_test_id("rent-tab-year").click()
+    check("the Year table still counts it (paid in 2026)", "Mieteinnahmen" in t.get_by_test_id("rent-year").inner_text())
+
     ctx_t.close()
     ctx_k.close()
     browser.close()
